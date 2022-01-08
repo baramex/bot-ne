@@ -1,2 +1,4 @@
 node_modules/
 package-lock.json
+tokens.json
+config.json
