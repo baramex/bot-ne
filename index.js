@@ -119,7 +119,7 @@ class Bot {
         }
 
         this.libs = { fs: require('fs'), FileSync: require('lowdb/adapters/FileSync'), axios: require("axios"), lowdb: require("lowdb"), discord: Discord, schedule: require('node-schedule'), canvas: require("canvas"), ms: require("ms") };
-        this.version = require("./tokens.json").version;
+        this.version = "0.4";
 
         this.footerAuthor = {};
 
