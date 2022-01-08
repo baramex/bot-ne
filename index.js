@@ -4,20 +4,15 @@ const moment = require("moment-timezone");
 
 const mongo = require('mongodb');
 const MongoClient = mongo.MongoClient;
-const dbName = 'new-empires';
+
 /**
  * @type {mongo.Db}
  */
 var db;
 
-/**
- * @type {"Release" | "Dev"}
- */
-const runType = "Release";
-
-MongoClient.connect(runType == "Dev" ? "mongodb://localhost:27017/" : 'mongodb://baramex:***REMOVED***@localhost:27017/', function (err, client) {
+MongoClient.connect(require("./tokens.json").mongodbLink, function (err, client) {
     console.log("Connected successfully to mongodb");
-    db = client.db(dbName + (runType == "Dev" ? "-dev" : ""));
+    db = client.db(require("./tokens.json").dbName);
 });
 
 class Bot {
@@ -27,8 +22,6 @@ class Bot {
     validColor = "00FF03";
 
     constructor() {
-        if (!["Dev", "Release"].includes(runType)) runType = "Dev";
-
         this.client = new Discord.Client({
             intents: [
                 Discord.Intents.FLAGS.GUILDS,
@@ -126,18 +119,17 @@ class Bot {
         }
 
         this.libs = { fs: require('fs'), FileSync: require('lowdb/adapters/FileSync'), axios: require("axios"), lowdb: require("lowdb"), discord: Discord, schedule: require('node-schedule'), canvas: require("canvas"), ms: require("ms") };
-        this.version = "0.3";
+        this.version = require("./tokens.json").version;
 
         this.footerAuthor = {};
 
-        this.databases = {};
-        Object.entries({ config: "config" + runType }).forEach(val => this.databases[val[0]] = this.libs.lowdb(new this.libs.FileSync("./databases/" + val[1] + ".json")));
+        this.config = this.libs.lowdb(new this.libs.FileSync("./config.json"));
 
         this.requestVerifMC = [];
 
         this.invites = [];
 
-        setTimeout(() => this.client.login(require("./databases/keys.json")["token" + runType]), 2000);
+        setTimeout(() => this.client.login(require("./tokens.json").botToken), 2000);
     }
 
     get guild() {
@@ -157,9 +149,9 @@ class Bot {
      * @returns {string | undefined}
      */
     property(family, name) {
-        var f = this.databases.config.get(family);
+        var f = this.config.get(family);
         if (f) return f.find({ name: name }).value();
-        else this.databases.config.set(family, []).write();
+        else this.config.set(family, []).write();
         return undefined;
     }
 
@@ -598,8 +590,8 @@ bot.client.on('ready', async () => {
 
         bot.getChannel("roles").send({ content: "Choose your roles !", components: [new Discord.MessageActionRow().addComponents(button1, button2)] }).then(mes => {
             if (bot.property("messages", "roles")) {
-                bot.databases.config.get("messages").find({ name: "roles" }).assign({ id: mes.id }).write();
-            } else bot.databases.config.get("messages").push({ name: "roles", id: mes.id }).write();
+                bot.config.get("messages").find({ name: "roles" }).assign({ id: mes.id }).write();
+            } else bot.config.get("messages").push({ name: "roles", id: mes.id }).write();
         });
     });
 
@@ -616,8 +608,8 @@ bot.client.on('ready', async () => {
 
         bot.getChannel("rules").send({ embeds: [embed], components: [new Discord.MessageActionRow().addComponents(button)] }).then(mes => {
             if (bot.property("messages", "rules")) {
-                bot.databases.config.get("messages").find({ name: "rules" }).assign({ id: mes.id }).write();
-            } else bot.databases.config.get("messages").push({ name: "rules", id: mes.id }).write();
+                bot.config.get("messages").find({ name: "rules" }).assign({ id: mes.id }).write();
+            } else bot.config.get("messages").push({ name: "rules", id: mes.id }).write();
         });
     });
 
@@ -635,8 +627,8 @@ bot.client.on('ready', async () => {
 
         bot.getChannel("tickets").send({ embeds: [embed], components: [new Discord.MessageActionRow().addComponents(button)] }).then(mes => {
             if (bot.property("messages", "ticket")) {
-                bot.databases.config.get("messages").find({ name: "ticket" }).assign({ id: mes.id }).write();
-            } else bot.databases.config.get("messages").push({ name: "ticket", id: mes.id }).write();
+                bot.config.get("messages").find({ name: "ticket" }).assign({ id: mes.id }).write();
+            } else bot.config.get("messages").push({ name: "ticket", id: mes.id }).write();
         });
     });
 
@@ -654,8 +646,8 @@ bot.client.on('ready', async () => {
 
         bot.getChannel("bugs").send({ embeds: [embed], components: [new Discord.MessageActionRow().addComponents(button)] }).then(mes => {
             if (bot.property("messages", "bug")) {
-                bot.databases.config.get("messages").find({ name: "bug" }).assign({ id: mes.id }).write();
-            } else bot.databases.config.get("messages").push({ name: "bug", id: mes.id }).write();
+                bot.config.get("messages").find({ name: "bug" }).assign({ id: mes.id }).write();
+            } else bot.config.get("messages").push({ name: "bug", id: mes.id }).write();
         });
     });
 
@@ -798,8 +790,8 @@ function deleteReport(type, interaction) {
 async function createReport(type, interaction) {
     if (!bot.getCategorie(type)) await bot.guild.channels.create("▁▃▅▇ " + type + " ▇▅▃▁", { type: "GUILD_CATEGORY", permissionOverwrites: [{ id: bot.guild.id, deny: ["VIEW_CHANNEL"] }, { id: bot.guild.roles.cache.find(a => a.name.includes("staff")).id, allow: ["VIEW_CHANNEL"] }] }).then(cha => {
         if (bot.property("categories", type)) {
-            bot.databases.config.get("categories").find({ name: type }).assign({ id: cha.id }).write();
-        } else bot.databases.config.get("categories").push({ name: type, id: cha.id }).write();
+            bot.config.get("categories").find({ name: type }).assign({ id: cha.id }).write();
+        } else bot.config.get("categories").push({ name: type, id: cha.id }).write();
     });
 
     var c = bot.getCategorie(type);
@@ -1023,7 +1015,7 @@ function getServerInvitation() {
         var cha = bot.getChannel("rules");
         if (!cha) return rej(bot.errorDebug(...bot.channelError(cha)));
         bot.guild.invites.create(cha, { maxAge: 0, maxUses: 0 }).then(inv => {
-            bot.databases.config.get("info").push({ name: "invite", code: inv.code }).write();
+            bot.config.get("info").push({ name: "invite", code: inv.code }).write();
             res(inv.code);
         }).catch(rej);
     });
