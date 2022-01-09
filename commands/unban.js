@@ -16,11 +16,11 @@ module.exports.run = (bot, interaction, lang, db) => {
 
                 var embed = new bot.libs.discord.MessageEmbed()
                     .setColor(bot.validColor)
-                    .setTitle(":dagger: | New Empires - result" + (lang == "fr" ? "at" : ""))
+                    .setTitle(":dagger: | New Empires - unban")
                     .setFooter({ text: bot.footerAuthor.text + " | " + lang.toUpperCase(), iconURL: bot.footerAuthor.iconURL })
                     .addField("Unban", ":white_check_mark: " + (lang == "en" ? "The user has been unbanned !" : "L'utilisateur a été débanni !"), true)
                     .addField("Memb" + (lang == "fr" ? "re" : "er"), member, true)
-                    .addField("Modo", modo.user.tag + " (" + modo.id + ")", true)
+                    .addField("Modo", "<@" + modo.id + ">", true)
                     .addField("Ban ID", doc.value._id);
 
                 bot.log(bot.codes.UNBAN, bot.status.OK, modo.id, member, { banID: doc.value._id });

@@ -7,7 +7,7 @@ module.exports.run = (bot, interaction, lang, db) => {
 
     var embed = new bot.libs.discord.MessageEmbed()
         .setColor(bot.infoColor)
-        .setTitle(":dagger: | New Empires - command" + (lang == "fr" ? "e" : ""))
+        .setTitle(":dagger: | New Empires - grade")
         .setFooter({ text: bot.footerAuthor.text + " | " + lang.toUpperCase(), iconURL: bot.footerAuthor.iconURL })
         .addField("Grade", (lang == "fr" ? ("Le grade de <@" + m.id + "> est ") : ("<@" + m.id + ">'s grade is ")) + "**" + grade + "**")
         .setThumbnail(m.user.avatarURL());

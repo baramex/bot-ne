@@ -16,17 +16,17 @@ module.exports.run = async (bot, interaction, lang, db) => {
             db.collection(sub == "member" ? "members-discord" : (sub + "s")).findOne(sub == "member" ? ({ id }) : ({ _id: id }), async (err, res) => {
                 if (res && !err) {
                     if (sub == "log") {
-                        return interaction.reply({embeds: [bot.logEmbed(res.code, res.status, res.author, res.member, res.content, id, res.date, lang)]});
+                        return interaction.reply({ embeds: [bot.logEmbed(res.code, res.status, res.author, res.member, res.content, id, res.date, lang)] });
                     }
                     else {
                         var embed = new bot.libs.discord.MessageEmbed()
                             .setColor(bot.validColor)
-                            .setTitle(":dagger: | New Empires - result" + (lang == "fr" ? "at" : ""))
+                            .setTitle(":dagger: | New Empires - get")
                             .setFooter({ text: bot.footerAuthor.text + " | " + lang.toUpperCase(), iconURL: bot.footerAuthor.iconURL })
                             .addField("ID", id, true)
                         if (res.date) embed.addField("Date", bot.formatDate(res.date), true);
-                        if (res.modoID || res.author) embed.addField("Modo", res.modoID || res.author || "No Modo", true)
-                        if (res.memberID || res.member) embed.addField("Member", res.memberID || res.member || "No Member", true);
+                        if (res.modoID || res.author) embed.addField("Modo", (res.modoID || res.author) ? ("<@" + (res.modoID || res.author) + ">") : "No Modo", true)
+                        if (res.memberID || res.member) embed.addField("Member", (res.member || res.memberID) ? ("<@" + (res.member || res.memberID) + ">") : "No Member", true);
                         if (res.type) embed.addField("Type", res.type, true);
                         if (res.hasOwnProperty("active")) embed.addField("Active", res.active ? "true" : "false", true);
                         if (res.reason) embed.addField(lang == "fr" ? "Raison" : "Reason", res.reason || "No Reason", true);
@@ -36,19 +36,7 @@ module.exports.run = async (bot, interaction, lang, db) => {
                         }
                         if (res.code) embed.addField("Code", res.code + ": " + Object.keys(bot.codes)[Object.values(bot.codes).findIndex(a => a == res.code)], true)
                         if (res.status) embed.addField("Status", res.status + ": " + bot.statusEmoji[res.status] + " " + Object.keys(bot.status)[Object.values(bot.status).findIndex(a => a == res.status)], true)
-                        if (res.content) {
-                            if (typeof res.content == "object") {
-                                var cntSTR = "{";
-                                if (res.content)
-                                    Object.entries(res.content).forEach(cnt => {
-                                        cntSTR += "\n   " + cnt[0] + ": " + cnt[1];
-                                    });
-                                else cntSTR += "    No Content";
-                                cntSTR += "\n}";
-                            }
-
-                            embed.addField("Content", cntSTR || res.content, true);
-                        }
+                        if (res.content) embed.addField("Content", res.content, true);
                         if (sub == "member") {
                             var b = await db.collection("bans").find({ memberID: id }).count();
                             var k = await db.collection("kicks").find({ memberID: id }).count();
@@ -102,13 +90,13 @@ module.exports.run = async (bot, interaction, lang, db) => {
                 l.forEach((res, i) => {
                     var embed = new bot.libs.discord.MessageEmbed()
                         .setColor(bot.validColor)
-                        .setTitle(":dagger: | New Empires - result" + (lang == "fr" ? "at" : ""))
+                        .setTitle(":dagger: | New Empires - get")
                         .setFooter({ text: bot.footerAuthor.text + " | " + lang.toUpperCase(), iconURL: bot.footerAuthor.iconURL })
                         .addField("Index", i.toString() || "0", true)
                         .addField("ID", member.id, true)
                         .addField("Date", bot.formatDate(res.date), true)
-                        .addField("Modo", res.modoID || res.author || "No Modo", true)
-                        .addField("Member", res.memberID || res.member || "No Member", true);
+                        .addField("Modo", (res.modoID || res.author) ? ("<@" + (res.modoID || res.author) + ">") : "No Modo", true)
+                        .addField("Member", (res.member || res.memberID) ? ("<@" + (res.member || res.memberID) + ">") : "No Member", true);
                     if (res.type) embed.addField("Type", res.type, true);
                     if (res.hasOwnProperty("active")) embed.addField("Active", res.active ? "true" : "false", true);
                     if (res.reason) embed.addField(lang == "fr" ? "Raison" : "Reason", res.reason || "No Reason", true);

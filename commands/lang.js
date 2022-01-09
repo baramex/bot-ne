@@ -7,7 +7,7 @@ module.exports.run = (bot, interaction, lang, db) => {
 
     var embed = new bot.libs.discord.MessageEmbed()
         .setColor(bot.infoColor)
-        .setTitle(":dagger: | New Empires - command" + (lang == "fr" ? "e" : ""))
+        .setTitle(":dagger: | New Empires - lang")
         .setFooter({ text: bot.footerAuthor.text + " | " + lang.toUpperCase(), iconURL: bot.footerAuthor.iconURL })
         .addField("Lang" + (lang == "fr" ? "ue" : ""), (lang == "fr" ? ("La langue de <@" + m.id + "> est ") : ("<@" + m.id + ">'s language is ")) + "**" + lStr + "**")
         .setThumbnail(m.user.avatarURL());
