@@ -5,14 +5,16 @@ const moment = require("moment-timezone");
 const mongo = require('mongodb');
 const MongoClient = mongo.MongoClient;
 
+require("dotenv").config();
+
 /**
  * @type {mongo.Db}
  */
 var db;
 
-MongoClient.connect(require("./tokens.json").mongodbLink, function (err, client) {
+MongoClient.connect(process.env.DB, function (err, client) {
     console.log("Connected successfully to mongodb");
-    db = client.db(require("./tokens.json").dbName);
+    db = client.db(process.env.DB_NAME);
 });
 
 class Bot {
@@ -129,7 +131,7 @@ class Bot {
 
         this.invites = [];
 
-        setTimeout(() => this.client.login(require("./tokens.json").botToken), 2000);
+        setTimeout(() => this.client.login(process.env.BOT_TOKEN), 2000);
     }
 
     get guild() {
