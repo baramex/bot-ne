@@ -22,9 +22,9 @@ module.exports.run = (bot, interaction, lang, db) => {
             interaction.reply(mes.size + (lang == "fr" ? " messages supprimés" : " messages deleted"));
             var res = [];
             mes.forEach(m => {
-                res.push({ content: m.content, embeds: m.embeds, author: m.author.id })
+                res.push({ content: m.content, embeds: m.embeds, author: m.author.id, messageID: m.id })
             });
-            bot.log(bot.codes.BULK_DELETE, bot.status.OK, modo.id, null, { messages: res });
+            bot.log(bot.codes.BULK_DELETE, bot.status.OK, modo.id, null, { messages: res, channelID: interaction.channelId });
             setTimeout(() => {
                 if (interaction.replied) interaction.deleteReply();
             }, 3000);

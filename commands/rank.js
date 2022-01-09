@@ -16,7 +16,7 @@ module.exports.run = async(bot, interaction, lang, db) => {
 
     var embed = new bot.libs.discord.MessageEmbed()
         .setColor(bot.infoColor)
-        .setTitle(":dagger: | New Empires - command" + (lang == "fr" ? "e" : ""))
+        .setTitle(":dagger: | New Empires - rank")
         .setFooter({ text: bot.footerAuthor.text + " | " + lang.toUpperCase(), iconURL: bot.footerAuthor.iconURL })
         .addField("Rank", str)
         .setThumbnail(arr[0].lastAvatarURL);

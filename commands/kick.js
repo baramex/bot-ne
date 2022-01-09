@@ -14,12 +14,12 @@ module.exports.run = (bot, interaction, lang, db) => {
         bot.kick(member, modo, reason).then(id => {
             var embed = new bot.libs.discord.MessageEmbed()
                 .setColor(bot.validColor)
-                .setTitle(":dagger: | New Empires - result" + (lang == "fr" ? "at" : ""))
+                .setTitle(":dagger: | New Empires - kick")
                 .setFooter({ text: bot.footerAuthor.text + " | " + lang.toUpperCase(), iconURL: bot.footerAuthor.iconURL })
                 .addField("Kick", ":white_check_mark: " + (lang == "en" ? "The member has been kicked !" : "Le membre a été expulsé !"), true)
                 .addField("Type", bot.types.DISCORD)
-                .addField("Memb" + (lang == "fr" ? "re" : "er"), member.user.tag + " (" + member.id + ")", true)
-                .addField("Modo", modo.user.tag + " (" + modo.id + ")", true)
+                .addField("Memb" + (lang == "fr" ? "re" : "er"), member.user.tag + " - <@" + member.id + ">", true)
+                .addField("Modo", "<@" + modo.id + ">", true)
                 .addField(lang == "fr" ? "Raison" : "Reason", reason, true)
                 .addField("ID", id, true)
                 .setThumbnail(member.user.avatarURL());

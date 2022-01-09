@@ -11,11 +11,10 @@ module.exports.run = async(bot, interaction, lang, db) => {
     var todayDate = new Date();
     todayDate.setHours(0);
     var todays = (await db.collection("logs").find({date: {$gte: todayDate}}).toArray()).length
-    console.log(todays);
 
     var embed = new bot.libs.discord.MessageEmbed()
         .setColor(bot.infoColor)
-        .setTitle(":dagger: | New Empires - command" + (lang == "fr" ? "e" : ""))
+        .setTitle(":dagger: | New Empires - logs")
         .setFooter({ text: bot.footerAuthor.text + " | " + lang.toUpperCase(), iconURL: bot.footerAuthor.iconURL })
         .addField("Logs size", formatSize(size), true)
         .addField("Number of documents", docs.toString(), true)

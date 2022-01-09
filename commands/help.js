@@ -1,7 +1,7 @@
 module.exports.run = (bot, interaction, lang, db) => {
     var embed = new bot.libs.discord.MessageEmbed()
         .setColor(bot.infoColor)
-        .setTitle(":dagger: | New Empires - command" + (lang == "fr" ? "e" : ""))
+        .setTitle(":dagger: | New Empires - help")
         .setFooter({ text: bot.footerAuthor.text + " | " + lang.toUpperCase(), iconURL: bot.footerAuthor.iconURL });
 
     var utilsCMD = "";

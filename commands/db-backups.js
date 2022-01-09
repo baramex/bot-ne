@@ -11,7 +11,7 @@ module.exports.run = (bot, interaction, lang, db) => {
 
         var embed = new bot.libs.discord.MessageEmbed()
             .setColor(bot.validColor)
-            .setTitle(":dagger: | New Empires - result" + (lang == "fr" ? "at" : ""))
+            .setTitle(":dagger: | New Empires - backup")
             .setFooter({ text: bot.footerAuthor.text + " | " + lang.toUpperCase(), iconURL: bot.footerAuthor.iconURL })
             .addField("Size of backups", formatSize(data.result.totalSize), true)
             .addField("Number of files", data.result.files.length + " backups", true)

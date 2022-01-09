@@ -33,11 +33,11 @@ module.exports.run = (bot, interaction, lang, db) => {
 
             var embed = new bot.libs.discord.MessageEmbed()
                 .setColor(bot.validColor)
-                .setTitle(":dagger: | New Empires - result" + (lang == "fr" ? "at" : ""))
+                .setTitle(":dagger: | New Empires - unmute")
                 .setFooter({ text: bot.footerAuthor.text + " | " + lang.toUpperCase(), iconURL: bot.footerAuthor.iconURL })
                 .addField("Unmute", ":white_check_mark: " + (lang == "en" ? "The member has been unmuted !" : "Le membre peut maintenant parler !"), true)
-                .addField("Memb" + (lang == "fr" ? "re" : "er"), member.id, true)
-                .addField("Modo", modo.user.tag + " (" + modo.id + ")", true)
+                .addField("Memb" + (lang == "fr" ? "re" : "er"), "<@" + member.id + ">", true)
+                .addField("Modo", "<@" + modo.id + ">", true)
                 .addField("Mute ID", mute._id);
 
             bot.log(bot.codes.UNMUTE, bot.status.OK, modo.id, member.id, { muteID: mute._id });
