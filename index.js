@@ -881,7 +881,7 @@ async function getInviter() {
         });
     });
     var invite = bot.invites.find(a => a.uses < n.find(b => b.id == a.id && b.code == a.code).uses);
-    return invite.id;
+    return invite?.id;
 }
 
 bot.errorDebug = (subject, message) => {
