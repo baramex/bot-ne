@@ -538,7 +538,7 @@ bot.client.on("guildMemberAdd", member => {
 });
 
 bot.client.on('ready', async () => {
-    bot.client.user.setPresence({ activities: [{ name: "In Update | v" + bot.version, type: 'PLAYING' }], status: "dnd" });
+    bot.client.user.setPresence({ activities: [{ name: "new empires | v" + bot.version, type: 'PLAYING' }], status: "dnd" });
 
     await bot.guild.members.fetch();
 
@@ -546,7 +546,7 @@ bot.client.on('ready', async () => {
         bot.guild.members.cache.get(bot.client.user.id).setNickname("B》New Empires");
     }
 
-    bot.footerAuthor = { text: "New Empires | by Baramex", iconURL: bot.guild.iconURL() };
+    bot.footerAuthor = { text: "New Empires | by baramex#6527", iconURL: bot.guild.iconURL() };
 
     await bot.guild.invites.fetch().then(invites => {
         invites.forEach(invite => {
