@@ -5,7 +5,7 @@ module.exports.run = (bot, interaction, lang, db) => {
     } catch (err) {}
 
     if (member) {
-        if (!modo.permissions.has("MUTE_MEMBERS")) {
+        if (!isGradePermission(modo.id, "MUTE_MEMBERS")) {
             bot.log(bot.codes.UNMUTE, bot.status.NOT_PERMISSION, modo.id, member.id, {});
             return interaction.reply({ embeds: [bot.embedNotPerm(lang)] });
         }

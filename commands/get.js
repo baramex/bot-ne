@@ -1,5 +1,5 @@
 module.exports.run = async (bot, interaction, lang, db) => {
-    if (!interaction.member.permissions.has("VIEW_AUDIT_LOG")) {
+    if (!isGradePermission(interaction.member.id, "VIEW_AUDIT_LOG")) {
         return interaction.reply({ embeds: [bot.embedNotPerm(lang)] });
     }
 
@@ -42,7 +42,7 @@ module.exports.run = async (bot, interaction, lang, db) => {
                             var k = await db.collection("kicks").find({ memberID: id }).count();
                             var m = await db.collection("mutes").find({ memberID: id }).count();
                             var w = await db.collection("warns").find({ memberID: id }).count();
-                            await bot.getLevel(id, async level => {
+                            await bot.getMemberInfo(id).then(level => {
                                 var exps = db.collection("members-discord").find(null, { projection: { lvl: true, exp: true } });
                                 var arr = await exps.toArray();
 
@@ -55,6 +55,9 @@ module.exports.run = async (bot, interaction, lang, db) => {
                                 embed.addFields([
                                     { name: "Last username", value: (res.lastUsername || "No Username") + "#" + (res.lastDiscriminator || "No Discriminator"), inline: true },
                                     { name: "Level", value: "#" + rank + " Level " + level.lvl + " (" + level.xp + "/" + level.maxXP + " XP)", inline: true },
+                                    { name: "Langs", value: level.lang, inline: true },
+                                    { name: "Agrees", value: level.agree, inline: true },
+                                    { name: "Grades", value: level.grades, inline: true },
                                     { name: "Warns", value: w + " warn(s)", inline: true },
                                     { name: "Mutes", value: m + " mute(s)", inline: true },
                                     { name: "Kicks", value: k + " kick(s)", inline: true },

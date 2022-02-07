@@ -5,7 +5,7 @@ module.exports.run = (bot, interaction, lang, db) => {
     } catch (err) {}
 
     if (member) {
-        if (!modo.permissions.has("BAN_MEMBERS")) {
+        if (!isGradePermission(modo.id, "BAN_MEMBERS")) {
             bot.log(bot.codes.UNBAN, bot.status.NOT_PERMISSION, modo.id, member, {});
             return interaction.reply({ embeds: [bot.embedNotPerm(lang)] });
         }

@@ -6,7 +6,7 @@ module.exports.run = (bot, interaction, lang, db) => {
     } catch (error) {}
 
     if (member && content) {
-        if (member.roles.highest.comparePositionTo(modo.roles.highest) >= 0 || !modo.permissions.has("KICK_MEMBERS") || member.id == modo.id) {
+        if (member.roles.highest.comparePositionTo(modo.roles.highest) >= 0 || !isGradePermission(modo.id, "KICK_MEMBERS") || member.id == modo.id) {
             bot.log(bot.codes.WARN, bot.status.NOT_PERMISSION, modo.id, member.id, { content });
             return interaction.reply({ embeds: [bot.embedNotPerm(lang)] });
         }

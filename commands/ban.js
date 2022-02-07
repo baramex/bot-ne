@@ -8,7 +8,7 @@ module.exports.run = (bot, interaction, lang, db) => {
     var duration = interaction.options.getString("duration", false);
 
     if (member && reason) {
-        if (member.roles.highest.comparePositionTo(modo.roles.highest) >= 0 || !member.bannable || !modo.permissions.has("BAN_MEMBERS") || member.id == modo.id) {
+        if (member.roles.highest.comparePositionTo(modo.roles.highest) >= 0 || !member.bannable || !bot.isGradePermission(modo.id, "BAN_MEMBERS") || member.id == modo.id) {
             bot.log(bot.codes.BAN, bot.status.NOT_PERMISSION, modo.id, member.id, { reason, duration });
             return interaction.reply({ embeds: [bot.embedNotPerm(lang)] });
         }
@@ -31,11 +31,13 @@ module.exports.run = (bot, interaction, lang, db) => {
         res.forEach(r => {
             t += bot.libs.ms(r) || 0;
         });
+        if(isNaN(t) || t < 0) t = 0;
 
         var id = bot.generateID();
         db.collection("bans").insertOne({ _id: id, modoID: modo.id, memberID: member.id, type: bot.types.DISCORD, reason: reason, active: true, duration: t || 0, endDate: new Date(t + new Date().getTime()), date: new Date() }).then(() => {
             member.ban({ reason: reason });
 
+            bot.removeAllGrades(member.id);
             bot.log(bot.codes.BAN, bot.status.OK, modo.id, member.id, { reason, duration, banID: id });
 
             var embed = new bot.libs.discord.MessageEmbed()

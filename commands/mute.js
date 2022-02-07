@@ -7,7 +7,7 @@ module.exports.run = (bot, interaction, lang, db) => {
     } catch (err) {}
 
     if (member && reason) {
-        if (member.roles.highest.comparePositionTo(modo.roles.highest) >= 0 || !modo.permissions.has("MUTE_MEMBERS") || member.id == modo.id) {
+        if (member.roles.highest.comparePositionTo(modo.roles.highest) >= 0 || !isGradePermission(modo.id, "MUTE_MEMBERS") || member.id == modo.id) {
             bot.log(bot.codes.MUTE, bot.status.NOT_PERMISSION, modo.id, member.id, { reason, duration });
             return interaction.reply({ embeds: [bot.embedNotPerm(lang)] });
         }
@@ -43,7 +43,7 @@ module.exports.run = (bot, interaction, lang, db) => {
             t += bot.libs.ms(r) || 0;
         });
 
-        if (t == 0 || isNaN(t)) return interaction.reply("Please enter a valid time");
+        if (t <= 0 || isNaN(t)) return interaction.reply("Please enter a valid time (ex: 3h10m)");
 
         var id = bot.generateID();
         db.collection("mutes").insertOne({ _id: id, modoID: modo.id, memberID: member.id, type: bot.types.DISCORD, reason: reason, duration: t || 0, endDate: new Date(t + new Date().getTime()), date: new Date() }).then(() => {
