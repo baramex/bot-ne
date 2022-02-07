@@ -1,5 +1,5 @@
 module.exports.run = (bot, interaction, lang, db) => {
-    if (!interaction.member.permissions.has("VIEW_AUDIT_LOG")) {
+    if (!isGradePermission(interaction.member.id, "VIEW_AUDIT_LOG")) {
         return interaction.reply({ embeds: [bot.embedNotPerm(lang)] });
     }
 

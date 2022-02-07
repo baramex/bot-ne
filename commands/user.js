@@ -2,7 +2,7 @@ module.exports.run = (bot, interaction, lang, db) => {
     var modo = interaction.member;
     var member = interaction.options.getMember("mention", false) || modo;
 
-    if (!modo.permissions.has("VIEW_AUDIT_LOG")) {
+    if (!isGradePermission(modo.id, "VIEW_AUDIT_LOG")) {
         return interaction.reply({ embeds: [bot.embedNotPerm(lang)] });
     }
 
@@ -13,7 +13,7 @@ module.exports.run = (bot, interaction, lang, db) => {
         var m = await db.collection("mutes").find({ memberID: member.id }).count();
         var w = await db.collection("warns").find({ memberID: member.id }).count();
 
-        bot.getLevel(member.id, async level => {
+        bot.getMemberInfo(member.id).then(async level => {
             var exps = db.collection("members-discord").find(null, { projection: { lvl: true, exp: true } });
             var arr = await exps.toArray();
 
@@ -36,8 +36,9 @@ module.exports.run = (bot, interaction, lang, db) => {
                     { name: "Joined At", value: bot.formatDate(member.joinedAt), inline: true },
                     { name: "Created At", value: bot.formatDate(member.user.createdAt), inline: true },
                     { name: "Level", value: "#" + rank + " Level " + level.lvl + " (" + level.xp + "/" + level.maxXP + " XP)", inline: true },
-                    { name: "Lang", value: bot.getLang(member) == "fr" ? (lang == "fr" ? "FRANÇAIS" : "FRENCH") : (lang == "fr" ? "ANGLAIS" : "ENGLISH"), inline: true },
-                    { name: "Grade", value: grade, inline: true },
+                    { name: "Langs", value: level.lang, inline: true },
+                    { name: "Agrees", value: level.agree, inline: true },
+                    { name: "Grades", value: level.grades, inline: true },
                     { name: "Warns", value: w + " warn(s)", inline: true },
                     { name: "Mutes", value: m + " mute(s)", inline: true },
                     { name: "Kicks", value: k + " kick(s)", inline: true },

@@ -3,13 +3,13 @@ module.exports.run = (bot, interaction, lang, db) => {
 
     var m = member || interaction.member;
 
-    var lStr = bot.getLang(m) == "fr" ? (lang == "fr" ? "FRANÇAIS" : "FRENCH") : (lang == "fr" ? "ANGLAIS" : "ENGLISH");
+    var lStr = bot.getLangsMember(m);
 
     var embed = new bot.libs.discord.MessageEmbed()
         .setColor(bot.infoColor)
         .setTitle(":dagger: | New Empires - lang")
         .setFooter({ text: bot.footerAuthor.text + " | " + lang.toUpperCase(), iconURL: bot.footerAuthor.iconURL })
-        .addField("Lang" + (lang == "fr" ? "ue" : ""), (lang == "fr" ? ("La langue de <@" + m.id + "> est ") : ("<@" + m.id + ">'s language is ")) + "**" + lStr + "**")
+        .addField("Lang" + (lang == "fr" ? "ue" : ""), (lang == "fr" ? ("La.les langue.s de <@" + m.id + "> est.sont ") : ("<@" + m.id + ">'s language.s is.are ")) + "**" + lStr + "**")
         .setThumbnail(m.user.avatarURL());
 
     interaction.reply({ embeds: [embed] });
