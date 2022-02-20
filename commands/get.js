@@ -1,5 +1,5 @@
 module.exports.run = async (bot, interaction, lang, db) => {
-    if (!isGradePermission(interaction.member.id, "VIEW_AUDIT_LOG")) {
+    if (!bot.isGradePermission(interaction.member.id, "VIEW_AUDIT_LOG")) {
         return interaction.reply({ embeds: [bot.embedNotPerm(lang)] });
     }
 
@@ -42,22 +42,23 @@ module.exports.run = async (bot, interaction, lang, db) => {
                             var k = await db.collection("kicks").find({ memberID: id }).count();
                             var m = await db.collection("mutes").find({ memberID: id }).count();
                             var w = await db.collection("warns").find({ memberID: id }).count();
-                            await bot.getMemberInfo(id).then(level => {
+                            await bot.getMemberInfo(id).then(async level => {
                                 var exps = db.collection("members-discord").find(null, { projection: { lvl: true, exp: true } });
                                 var arr = await exps.toArray();
 
                                 var rank = 1;
                                 arr.forEach(mem => {
                                     if (mem.lvl > level.lvl) rank++;
-                                    else if (mem.lvl == level.lvl && mem.exp > level.xp) rank++;
+                                    else if (mem.lvl == level.lvl && mem.exp > level.exp) rank++;
                                 });
 
                                 embed.addFields([
                                     { name: "Last username", value: (res.lastUsername || "No Username") + "#" + (res.lastDiscriminator || "No Discriminator"), inline: true },
-                                    { name: "Level", value: "#" + rank + " Level " + level.lvl + " (" + level.xp + "/" + level.maxXP + " XP)", inline: true },
-                                    { name: "Langs", value: level.lang, inline: true },
-                                    { name: "Agrees", value: level.agree, inline: true },
-                                    { name: "Grades", value: level.grades, inline: true },
+                                    { name: "Account created At", value: bot.formatDate(level.date), inline: true },
+                                    { name: "Level", value: "#" + rank + " Level " + level.lvl + " (" + level.exp + "/" + level.maxExp + " XP)", inline: true },
+                                    { name: "Langs", value: level.langs.join(" & ") || "no lang", inline: true },
+                                    { name: "Agrees", value: level.agrees.join(" & ") || "no agree", inline: true },
+                                    { name: "Grades", value: level.grades.join(" & ") || "no grade", inline: true },
                                     { name: "Warns", value: w + " warn(s)", inline: true },
                                     { name: "Mutes", value: m + " mute(s)", inline: true },
                                     { name: "Kicks", value: k + " kick(s)", inline: true },

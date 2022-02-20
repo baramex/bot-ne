@@ -2,12 +2,12 @@ module.exports.run = (bot, interaction, lang, db) => {
     var m = interaction.options.getUser("mention", false);
 
     var id = m ? m.id : interaction.member.id;
-    bot.getLevel(id, async level => {
+    bot.getMemberInfo(id).then(async level => {
         if (!level) return interaction.reply("User not found !");
 
         var user = m ? m : interaction.user;
 
-        const { lvl, xp, maxXP } = level;
+        const { lvl, exp, maxExp } = level;
 
         var exps = db.collection("members-discord").find(null, { projection: { lvl: true, exp: true } });
         var arr = await exps.toArray();
@@ -15,7 +15,7 @@ module.exports.run = (bot, interaction, lang, db) => {
         var rank = 1;
         arr.forEach(mem => {
             if (mem.lvl > level.lvl) rank++;
-            else if (mem.lvl == level.lvl && mem.exp > level.xp) rank++;
+            else if (mem.lvl == level.lvl && mem.exp > level.exp) rank++;
         });
 
         const width = 950,
@@ -80,20 +80,20 @@ module.exports.run = (bot, interaction, lang, db) => {
         ctx.fill();
 
         ctx.fillStyle = "rgba(106, 17, 17, 0.9)";
-        roundedRect(ctx, height * 0.95 + 15 + 10, height / 2 - 20, (width - (height * 0.95 + 15 + 10) - 15) * (xp / maxXP), 30, 30);
+        roundedRect(ctx, height * 0.95 + 15 + 10, height / 2 - 20, (width - (height * 0.95 + 15 + 10) - 15) * (exp / maxExp), 30, 30);
         ctx.fill();
 
         ctx.fillStyle = "#817F7F";
         ctx.font = "35px arial";
         ctx.textAlign = "right";
-        var l = ctx.measureText(maxXP + " XP");
-        ctx.fillText(maxXP + " XP", width - 15, height / 2 - 47);
+        var l = ctx.measureText(maxExp + " XP");
+        ctx.fillText(maxExp + " XP", width - 15, height / 2 - 47);
         ctx.fillText("/", width - 15 - l.width - 3, height / 2 - 47);
 
         ctx.fillStyle = "#F5F2F2";
         ctx.textAlign = "right";
         ctx.font = "bold 35px arial";
-        ctx.fillText(xp, width - 15 - l.width - 20, height / 2 - 47);
+        ctx.fillText(exp, width - 15 - l.width - 20, height / 2 - 47);
 
         const attach = new bot.libs.discord.MessageAttachment(canvas.toBuffer(), "card.png");
         interaction.reply({ files: [attach] });

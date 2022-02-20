@@ -119,7 +119,7 @@ class Bot {
         this.types = {
             DISCORD: "DISCORD",
             MINECRAFT: "MINECRAFT"
-        }
+        };
         this.grades = {
             FOUNDER: "founder",
             DEVELOPER: "developer",
@@ -128,7 +128,26 @@ class Bot {
             BUILDER: "builder",
             BOT: "bot",
             DISCORD_MODERATOR: "discord moderator"
-        }
+        };
+        this.channels = {
+            STAFF_CHAT: "staff-chat",
+            ADMIN_LOGS: "admin-logs",
+            RULES: "rules",
+            ROLES: "roles",
+            GATE: "gate",
+            TICKETS: "tickets",
+            BUGS: "bugs"
+        };
+        this.categories = {
+            TICKETS: "tickets",
+            BUGS: "bugs"
+        };
+        this.roles = {
+            MEMBER: "member",
+            STAFF: "staff",
+            FRENCH: "french",
+            ENGLISH: "english"
+        };
 
         this.libs = { fs: require('fs'), FileSync: require('lowdb/adapters/FileSync'), axios: require("axios"), lowdb: require("lowdb"), discord: Discord, schedule: require('node-schedule'), canvas: require("canvas"), ms: require("ms") };
         this.version = "0.5";
@@ -335,7 +354,7 @@ class Bot {
     }
 
     addLangMember(id, lang) {
-        if (!getLangsMember(id).includes(lang)) db.collection("members-discord").updateOne({ id }, { $push: { langs: lang } });
+        db.collection("members-discord").updateOne({ id }, { $addToSet: { langs: lang } });
     }
 
     removeLangMember(id, lang) {
@@ -368,6 +387,15 @@ class Bot {
         });
     }
 
+    getGradesPrefix(id) {
+        return new Promise((res, rej) => {
+            this.getGradesMember(id).then(grades => {
+                grades = grades.map(a => a.charAt(0).toUpperCase());
+                res(grades.length > 0 ? grades.join("-") + "》" : "");
+            });
+        });
+    }
+
     isGradePermission(id, perm) {
         return new Promise((res, rej) => {
             this.getGradesMember(id).then(grades => {
@@ -386,7 +414,7 @@ class Bot {
     }
 
     removeAllGrades(id) {
-        db.collection("members-discord").updateOne({ id }, { grades: [] });
+        db.collection("members-discord").updateOne({ id }, { $set: { grades: [] } });
     }
 
     /**
@@ -410,25 +438,28 @@ class Bot {
         return roles;
     }
 
-    channelError = (channel) => {
-        return ["Config/Channels", "The channel " + channelID(channel) + " generates an error to send a message"];
+    channelError(channel) {
+        return ["Config/Channels", "The channel **" + channel + "** generates an error to send a message"];
     }
 
-    errorDebug = (subject, message) => {
-        var channel = bot.getChannel("logs");
+    errorDebug(subject, message, mention=false) {
+        var channel = bot.guild.channels.cache.find(a => a.name.includes("staff-chat"));
         var embed = new Discord.MessageEmbed()
             .setColor(bot.warningColor)
-            .setTitle(":dagger: | New Empires - error")
+            .setTitle(":dagger: | New Empires - debug error")
             .setFooter(bot.footerAuthor)
             .setTimestamp()
             .addField("Date", bot.formatDate(new Date()), true)
             .addField("Subject", subject, true)
             .addField("Description", message, true)
 
-        if (channel.type == "GUILD_TEXT") channel.send({ embeds: [embed] });
+        if (mention) {
+            channel?.send("<@everyone: DEBUG ERROR>");
+        }
+        channel?.send({ embeds: [embed] });
     }
 
-    formatDate = (dateObj) => {
+    formatDate(dateObj) {
         var date = moment(dateObj.getTime()).tz("Europe/Paris");
 
         var str = date.format("YYYY/MM/DD HH:mm:ss Z");
@@ -436,7 +467,7 @@ class Bot {
         return str;
     }
 
-    durationDate = (ms) => {
+    durationDate(ms) {
         var y = Math.floor(ms / (1000 * 60 * 60 * 24 * 365));
         var m = Math.floor(ms / (1000 * 60 * 60 * 24 * 30)) % 365;
         var d = Math.floor(ms / (1000 * 60 * 60 * 24)) % 30;
@@ -447,11 +478,11 @@ class Bot {
         return (y ? (y + " years ") : "") + (m ? m + " month " : "") + (d ? d + " days " : "") + (h ? h + " hours " : "") + (min ? min + " minutes" : "") + (sec ? sec + " seconds" : "");
     }
 
-    getExpLvl = (level) => {
+    getExpLvl(level) {
         return ((level * 100 + level * 30) * (Math.round(level / 5) + 1));
     }
 
-    getMemberInfo = id => {
+    getMemberInfo(id){
         return new Promise((res, rej) => {
             db.collection("members-discord").findOne({ id }).then(doc => {
                 if (!doc) rej();
@@ -460,7 +491,7 @@ class Bot {
         });
     };
 
-    generateID = () => {
+    generateID() {
         var a = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890".split("");
         var b = "";
         for (var i = 0; i < 16; i++) {
@@ -675,10 +706,6 @@ bot.client.on('ready', async () => {
 
     await bot.guild.members.fetch();
 
-    if (bot.guild.members.cache.get(bot.client.user.id).nickname != "B》New Empires") {
-        bot.guild.members.cache.get(bot.client.user.id).setNickname("B》New Empires");
-    }
-
     bot.footerAuthor = { text: "New Empires | by baramex#6527", iconURL: bot.guild.iconURL() };
 
     await bot.guild.invites.fetch().then(invites => {
@@ -775,7 +802,7 @@ bot.client.on('ready', async () => {
             .setDescription(":octagonal_sign: Have you noticed a bug ?");
         var button = new Discord.MessageButton()
             .setCustomId('bug')
-            .setLabel('Report')
+            .setLabel('Report a bug')
             .setStyle('PRIMARY')
             .setEmoji("📩");
 
@@ -838,10 +865,10 @@ bot.client.on("guildMemberRemove", (member) => {
     } else bot.errorDebug(...bot.channelError(channel));
 });
 
-bot.client.on("interactionCreate", interaction => {
+bot.client.on("interactionCreate", async interaction => {
     if (!interaction.isCommand()) return;
 
-    var lang = await bot.getLangMember(interaction.member).catch(console.error);
+    var lang = await bot.getLangMember(interaction.member.id).catch(console.error);
 
     var cmd = bot.commands.find(a => interaction.commandName.startsWith(a.infos.name));
     if (cmd) cmd.cmd.run(bot, interaction, lang, db);
@@ -898,7 +925,7 @@ bot.client.on("interactionCreate", async interaction => {
         var member = interaction.member;
 
         var langs = await bot.getLangsMember(member.id).catch(console.error);
-        if(!langs) return;
+        if (!langs) return;
 
         var fr = bot.getRole("french");
         var en = bot.getRole("english");
@@ -980,7 +1007,7 @@ async function createReport(type, interaction) {
         n = Number(channels.sort((a, b) => Number(b.name.split("-")[0]) - Number(a.name.split("-")[0])).first().name.split("-")[0]) + 1;
     }
 
-    bot.guild.channels.create(n.toString().padStart(3, "0") + "-" + interaction.member.id, { type: "GUILD_TEXT", permissionOverwrites: [{ id: interaction.member.id, allow: ["VIEW_CHANNEL"] }, { id: bot.guild.id, deny: ["VIEW_CHANNEL"] }, { id: bot.guild.roles.cache.find(a => a.name.includes("staff")).id, allow: ["VIEW_CHANNEL"] }], parent: c }).then(cha => {
+    bot.guild.channels.create(n.toString().padStart(3, "0") + "-" + interaction.member.id, { type: "GUILD_TEXT", permissionOverwrites: [{ id: interaction.member.id, allow: ["VIEW_CHANNEL"] }, { id: bot.guild.id, deny: ["VIEW_CHANNEL"] }, { id: bot.guild.roles.cache.find(a => a.name.includes("staff")).id, allow: ["VIEW_CHANNEL"] }], parent: c }).then(async cha => {
         cha.send({
             embeds: [new Discord.MessageEmbed().setColor(bot.infoColor)
                 .setTitle(":dagger: | New Empires - report")
@@ -989,8 +1016,8 @@ async function createReport(type, interaction) {
                 .addField("Type", type.slice(0, -1), true)
                 .addField("Member", "<@" + interaction.member.id + ">", true)
                 .addField("Date", bot.formatDate(new Date()) || "no date", true)
-                .addField("Langs", await bot.getLangsMember(interaction.member).catch("error") || "no langs", true)
-                .addField("Grade", bot.getGrade(interaction.member).name || "no grade", true)
+                .addField("Langs", (await bot.getLangsMember(interaction.member).catch("error")).join(" & ") || "no lang", true)
+                .addField("Grades", (await bot.getGradesMember(interaction.member).catch("error")).join(" & ") || "no grade", true)
                 .setThumbnail(interaction.user.avatarURL())
             ],
             components: [new Discord.MessageActionRow().addComponents(new Discord.MessageButton().setCustomId('delete_' + type.slice(0, -1))
@@ -1010,7 +1037,7 @@ bot.client.on("messageCreate", mes => {
     if (mes.author.bot) return;
 
     var exp = Math.round(Math.sqrt(Math.sqrt(mes.content.length)) * 6);
-    addExp(mes.author, exp, lvl => {
+    addExp(mes.author, exp, async lvl => {
         mes.reply((await bot.getLangMember(mes.member).catch(console.error)) == "fr" ? ("Bravo, tu passes niveau " + lvl + " !") : ("GG, you are going to level " + lvl + " !"));
     });
 });
@@ -1030,16 +1057,6 @@ function channelID(channel) {
     return channel.isText() ? `<#${channel.id}>` : channel.id;
 }
 
-function parseRoleName(name) {
-    var list = ["french", "english", "member", "staff", "builder", "moderator", "administrator", "developer", "founder", "bot"];
-
-    return list.find(a => name.replace(/ /g, "").toLowerCase().includes(a.replace(/ /g, "").toLowerCase())) || "everyone";
-}
-
-function getPrefixRole(roleName) {
-    return { builder: "B", moderator: "M", administrator: "A", developer: "D", founder: "F", bot: "B" }[roleName] || "";
-}
-
 async function getInviter() {
     var n = [];
     await bot.guild.invites.fetch().then(invites => {
@@ -1048,6 +1065,7 @@ async function getInviter() {
         });
     });
     var invite = bot.invites.find(a => a.uses < n.find(b => b.id == a.id && b.code == a.code).uses);
+    bot.invites = n;
     return invite?.id;
 }
 
@@ -1075,22 +1093,64 @@ function addExp(user, _exp, callback) {
 }
 
 function createMember(id, username, discriminator, avatar) {
-    db.collection("members-discord").insertOne({ _id: bot.generateID(), id: id, lastUsername: username, lastDiscriminator: discriminator, exp: 0, lvl: 1, lastAvatarURL: avatar, langs: [], agrees: [], grades: [] });
+    db.collection("members-discord").insertOne({ _id: bot.generateID(), id: id, lastUsername: username, lastDiscriminator: discriminator, exp: 0, lvl: 1, lastAvatarURL: avatar, langs: [], agrees: [], grades: [], date: new Date() });
 }
 
 const update = bot.libs.schedule.scheduleJob('0 */3 * * *', async () => {
-    bot.guild.members.cache.forEach(member => {
+    await db.collection("members-discord").updateMany({}, { $setOnInsert: { grades: [], langs: [], agrees: [], date: new Date() } }).catch(console.error).catch(console.error);
+
+    Object.values(bot.grades).concat(Object.values(bot.roles)).forEach(grade => {
+       if(!bot.guild.roles.cache.find(a => a.name.includes(grade))) {
+           bot.errorDebug("ROLES - IMPORTANT", "Role not found: **" + grade + "**", true);
+       }
+    });
+
+    Object.values(bot.channels).forEach(channel => {
+        if(!bot.guild.channels.cache.find(a => a.name.includes(channel) && a.type != "GUILD_CATEGORY")) {
+            bot.errorDebug("CHANNELS - IMPORTANT", "Channel not found: **" + channel + "**", true);
+        }
+    });
+
+    Object.values(bot.categories).forEach(category => {
+        if(!bot.guild.channels.cache.find(a => a.name.includes(category) && a.type == "GUILD_CATEGORY")) {
+            bot.errorDebug("CATEGORIES - IMPORTANT", "Category not found: **" + category + "**", true);
+        }
+    });
+
+    bot.guild.members.cache.forEach(async member => {
         if (!member.user.bot) {
             bot.getMemberInfo(member.id).then(res => {
                 if (res.lastUsername != member.user.username || res.lastAvatarURL != member.user.avatarURL() || res.lastDiscriminator != member.user.discriminator) {
-                    db.collection("members-discord").updateOne({ id: member.id }, { $set: { lastUsername: member.user.username, lastDiscriminator: member.user.discriminator, lastAvatarURL: member.user.avatarURL() } });
+                    db.collection("members-discord").updateOne({ id: member.id }, { $set: { lastUsername: member.user.username, lastDiscriminator: member.user.discriminator, lastAvatarURL: member.user.avatarURL() } }).catch(console.error);
                 }
+                var grades = res.grades;
+                var langs = res.langs;
+
+                var gradeRoles = bot.getRolesFromGrades(grades);
+                var langRoles = bot.getRolesFromLangs(langs);
+
+                if(gradeRoles.length != 0) gradeRoles.push(bot.guild.roles.cache.find(a => a.name.includes("staff")));
+                gradeRoles.push(bot.guild.roles.cache.find(a => a.name.includes("member")));
+
+                gradeRoles = gradeRoles.map(a => a.id);
+                langRoles = langRoles.map(a => a.id);
+
+                var roles = gradeRoles.concat(langRoles);
+
+                member.roles.cache.forEach(role => {
+                    if(!roles.includes(role.id) && role.id != bot.guild.roles.everyone.id) member.roles.remove(role.id);
+                });
+                roles.forEach(id => {
+                    if(!member.roles.cache.has(id)) member.roles.add(bot.guild.roles.cache.get(id));
+                });
             }).catch(() => createMember(member.id, member.user.username, member.user.discriminator, member.user.avatarURL()));
         }
-        if (member.nickname != getPrefixRole(bot.getGrade(member).name) + "》" + member.user.username || (!getPrefixRole(bot.getGrade(member).name) && member.nickname)) {
-            if (member.manageable && member.id != bot.client.user.id) {
-                if (!getPrefixRole(bot.getGrade(member).name)) member.setNickname("");
-                else member.setNickname(getPrefixRole(bot.getGrade(member).name) + "》" + member.user.username);
+
+        var prefix = member.user.bot ? "B》" : await bot.getGradesPrefix(member.id).catch(console.error);
+        if (member.nickname != prefix + member.user.username || (!prefix && member.nickname)) {
+            if (member.manageable) {
+                if (!prefix) member.setNickname("");
+                else member.setNickname(prefix + member.user.username);
             }
         }
     });
