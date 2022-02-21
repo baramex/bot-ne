@@ -1,5 +1,5 @@
 module.exports.run = async (bot, interaction, lang, db) => {
-    if (!bot.isGradePermission(interaction.member.id, "VIEW_AUDIT_LOG")) {
+    if (!(await bot.isGradePermission(interaction.member.id, "VIEW_AUDIT_LOG"))) {
         return interaction.reply({ embeds: [bot.embedNotPerm(lang)] });
     }
 
@@ -38,13 +38,13 @@ module.exports.run = async (bot, interaction, lang, db) => {
                         if (res.status) embed.addField("Status", res.status + ": " + bot.statusEmoji[res.status] + " " + Object.keys(bot.status)[Object.values(bot.status).findIndex(a => a == res.status)], true)
                         if (res.content) embed.addField("Content", res.content, true);
                         if (sub == "member") {
-                            var b = await db.collection("bans").find({ memberID: id }).count();
-                            var k = await db.collection("kicks").find({ memberID: id }).count();
-                            var m = await db.collection("mutes").find({ memberID: id }).count();
-                            var w = await db.collection("warns").find({ memberID: id }).count();
+                            var b = await db.collection("bans").find({ memberID: id }).count().catch(console.error);
+                            var k = await db.collection("kicks").find({ memberID: id }).count().catch(console.error);
+                            var m = await db.collection("mutes").find({ memberID: id }).count().catch(console.error);
+                            var w = await db.collection("warns").find({ memberID: id }).count().catch(console.error);
                             await bot.getMemberInfo(id).then(async level => {
                                 var exps = db.collection("members-discord").find(null, { projection: { lvl: true, exp: true } });
-                                var arr = await exps.toArray();
+                                var arr = await exps.toArray().catch(console.error);
 
                                 var rank = 1;
                                 arr.forEach(mem => {
@@ -88,7 +88,7 @@ module.exports.run = async (bot, interaction, lang, db) => {
         } catch (error) { };
 
         if (member) {
-            var l = await db.collection(sub).find({ memberID: member.id }).toArray();
+            var l = await db.collection(sub).find({ memberID: member.id }).toArray().catch(console.error);
             if (l.length > 0) {
                 var embeds = [];
                 l.forEach((res, i) => {
@@ -97,7 +97,7 @@ module.exports.run = async (bot, interaction, lang, db) => {
                         .setTitle(":dagger: | New Empires - get")
                         .setFooter({ text: bot.footerAuthor.text + " | " + lang.toUpperCase(), iconURL: bot.footerAuthor.iconURL })
                         .addField("Index", i.toString() || "0", true)
-                        .addField("ID", member.id, true)
+                        .addField("ID", res._id, true)
                         .addField("Date", bot.formatDate(res.date), true)
                         .addField("Modo", (res.modoID || res.author) ? ("<@" + (res.modoID || res.author) + ">") : "No Modo", true)
                         .addField("Member", (res.member || res.memberID) ? ("<@" + (res.member || res.memberID) + ">") : "No Member", true);

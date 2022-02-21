@@ -1,4 +1,4 @@
-module.exports.run = (bot, interaction, lang, db) => {
+module.exports.run = async (bot, interaction, lang, db) => {
     var modo = interaction.member;
     try {
         var member = interaction.options.getMember("mention", true);
@@ -6,7 +6,7 @@ module.exports.run = (bot, interaction, lang, db) => {
     } catch (error) {}
 
     if (member && content) {
-        if (member.roles.highest.comparePositionTo(modo.roles.highest) >= 0 || !isGradePermission(modo.id, "KICK_MEMBERS") || member.id == modo.id) {
+        if (member.roles.highest.comparePositionTo(modo.roles.highest) >= 0 || !(await bot.isGradePermission(modo.id, "KICK_MEMBERS")) || member.id == modo.id) {
             bot.log(bot.codes.WARN, bot.status.NOT_PERMISSION, modo.id, member.id, { content });
             return interaction.reply({ embeds: [bot.embedNotPerm(lang)] });
         }
@@ -28,7 +28,7 @@ module.exports.run = (bot, interaction, lang, db) => {
                 .setThumbnail(member.user.avatarURL());
 
             interaction.reply({ embeds: [embed] });
-        });
+        }).catch(console.error);
     }
 };
 

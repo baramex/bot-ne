@@ -1,4 +1,4 @@
-module.exports.run = (bot, interaction, lang, db) => {
+module.exports.run = async (bot, interaction, lang, db) => {
     var modo = interaction.member;
     try {
         var member = interaction.options.getMember("mention", true);
@@ -6,7 +6,7 @@ module.exports.run = (bot, interaction, lang, db) => {
     } catch (err) {}
 
     if (member && reason) {
-        if (member.roles.highest.comparePositionTo(modo.roles.highest) >= 0 || !member.kickable || !bot.isGradePermission(modo.id, "KICK_MEMBERS") || member.id == modo.id) {
+        if (member.roles.highest.comparePositionTo(modo.roles.highest) >= 0 || !member.kickable || !(await bot.isGradePermission(modo.id, "KICK_MEMBERS")) || member.id == modo.id) {
             bot.log(bot.codes.KICK, bot.status.NOT_PERMISSION, modo.id, member.id, { reason });
             return interaction.reply({ embeds: [bot.embedNotPerm(lang)] });
         }
@@ -17,7 +17,7 @@ module.exports.run = (bot, interaction, lang, db) => {
                 .setTitle(":dagger: | New Empires - kick")
                 .setFooter({ text: bot.footerAuthor.text + " | " + lang.toUpperCase(), iconURL: bot.footerAuthor.iconURL })
                 .addField("Kick", ":white_check_mark: " + (lang == "en" ? "The member has been kicked !" : "Le membre a été expulsé !"), true)
-                .addField("Type", bot.types.DISCORD)
+                .addField("Type", bot.types.DISCORD, true)
                 .addField("Memb" + (lang == "fr" ? "re" : "er"), member.user.tag + " - <@" + member.id + ">", true)
                 .addField("Modo", "<@" + modo.id + ">", true)
                 .addField(lang == "fr" ? "Raison" : "Reason", reason, true)
@@ -25,7 +25,7 @@ module.exports.run = (bot, interaction, lang, db) => {
                 .setThumbnail(member.user.avatarURL());
 
             interaction.reply({ embeds: [embed] });
-        })
+        }).catch(console.error);
     }
 };
 

@@ -1,5 +1,5 @@
-module.exports.run = (bot, interaction, lang, db) => {
-    if (!isGradePermission(interaction.member.id, "VIEW_AUDIT_LOG")) {
+module.exports.run = async (bot, interaction, lang, db) => {
+    if (!(await bot.isGradePermission(interaction.member.id, "VIEW_AUDIT_LOG"))) {
         return interaction.reply({ embeds: [bot.embedNotPerm(lang)] });
     }
 

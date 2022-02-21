@@ -1,4 +1,4 @@
-module.exports.run = (bot, interaction, lang, db) => {
+module.exports.run = async (bot, interaction, lang, db) => {
     var modo = interaction.member;
     try {
         var member = interaction.options.getMember("mention", true);
@@ -8,7 +8,7 @@ module.exports.run = (bot, interaction, lang, db) => {
     var duration = interaction.options.getString("duration", false);
 
     if (member && reason) {
-        if (member.roles.highest.comparePositionTo(modo.roles.highest) >= 0 || !member.bannable || !bot.isGradePermission(modo.id, "BAN_MEMBERS") || member.id == modo.id) {
+        if (member.roles.highest.comparePositionTo(modo.roles.highest) >= 0 || !member.bannable || !(await bot.isGradePermission(modo.id, "BAN_MEMBERS")) || member.id == modo.id) {
             bot.log(bot.codes.BAN, bot.status.NOT_PERMISSION, modo.id, member.id, { reason, duration });
             return interaction.reply({ embeds: [bot.embedNotPerm(lang)] });
         }
@@ -54,7 +54,7 @@ module.exports.run = (bot, interaction, lang, db) => {
                 .addField("ID", id, true)
                 .setThumbnail(member.user.avatarURL());
 
-            interaction.reply({ embeds: [embed] });
+            interaction.reply({ embeds: [embed] }).catch(console.error);
         });
     }
 };

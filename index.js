@@ -14,6 +14,10 @@ require("dotenv").config();
 var db;
 
 MongoClient.connect(process.env.DB, function (err, client) {
+    if(err) {
+        console.error("Mongodb error");
+        return process.exit(1);
+    }
     console.log("Connected successfully to mongodb");
     db = client.db(process.env.DB_NAME);
 });
@@ -192,9 +196,7 @@ class Bot {
      * @returns  {Discord.Role}
      */
     getRole(name) {
-        var p = this.property("roles", name);
-        if (!p || !this.guild) return null;
-        return this.guild.roles.cache.get(p.id);
+        return this.guild.roles.cache.find(a => a.name.split("|")[1]?.toLocaleLowerCase().replace(/ /g, "") == name.toLowerCase().replace(/ /g, ""));
     }
 
     /**
@@ -203,9 +205,7 @@ class Bot {
      * @returns {Discord.GuildChannel}
      */
     getChannel(name) {
-        var p = this.property("channels", name);
-        if (!p || !this.guild) return null;
-        return this.guild.channels.cache.get(p.id);
+        return this.guild.channels.cache.find(a => a.name.split("》")[1]?.toLowerCase() == name.toLowerCase().replace(/ /g, "-") && a.type != 'GUILD_CATEGORY');
     }
 
     /**
@@ -213,10 +213,8 @@ class Bot {
      * @param {string} name 
      * @returns {Discord.GuildChannel}
      */
-    getCategorie(name) {
-        var p = this.property("categories", name);
-        if (!p || !this.guild) return null;
-        return this.guild.channels.cache.get(p.id);
+    getCategory(name) {
+        return this.guild.channels.cache.find(a => a.name.includes(name) && a.type == 'GUILD_CATEGORY');
     }
 
     /**
@@ -230,7 +228,7 @@ class Bot {
             var p = this.property("messages", name);
             if (!p || !this.guild || !channel) rej();
             channel.messages.fetch(p.id).then(res).catch(rej);
-        })
+        });
     }
 
     /**
@@ -260,12 +258,10 @@ class Bot {
     log(code, status, author, member, content, date = new Date()) {
         var id = this.generateID();
 
-        db.collection("logs").insertOne({ _id: id, code, status, author, member, content, date });
+        db.collection("logs").insertOne({ _id: id, code, status, author, member, content, date }).catch(console.error);
 
-        var l = this.getChannel("logs");
-        if (l) {
-            l.send({ embeds: [this.logEmbed(code, status, author, member, content, id, date)] });
-        } else this.errorDebug(...this.channelError(l));
+        var l = this.getChannel(bot.channels.ADMIN_LOGS);
+        l?.send({ embeds: [this.logEmbed(code, status, author, member, content, id, date)] });
     }
 
     /**
@@ -277,7 +273,7 @@ class Bot {
         db.collection("bans").updateOne({ _id: banID }, { $set: { active: false } }).then(() => {
             this.guild.members.unban(userID, "Auto Unban").then(() => {
                 this.log(this.codes.UNBAN, this.status.AUTOMATIC, this.client.user.id, userID, { banID });
-            });
+            }).catch(console.error);
         });
     }
 
@@ -349,16 +345,16 @@ class Bot {
             db.collection("members-discord").findOne({ id }).then(doc => {
                 if (doc) return res(doc.langs);
                 return rej();
-            });
+            }).catch(rej);
         });
     }
 
     addLangMember(id, lang) {
-        db.collection("members-discord").updateOne({ id }, { $addToSet: { langs: lang } });
+        db.collection("members-discord").updateOne({ id }, { $addToSet: { langs: lang } }).catch(console.error);
     }
 
     removeLangMember(id, lang) {
-        db.collection("members-discord").updateOne({ id }, { $pull: { langs: lang } });
+        db.collection("members-discord").updateOne({ id }, { $pull: { langs: lang } }).catch(console.error);
     }
 
     getAgreesMember(id) {
@@ -366,16 +362,16 @@ class Bot {
             db.collection("members-discord").findOne({ id }).then(doc => {
                 if (doc) return res(doc.agrees);
                 return rej();
-            });
+            }).catch(rej);
         });
     }
 
     addAgreeMember(id, agree) {
-        if (!getLangsMember(id).includes(lang)) db.collection("members-discord").updateOne({ id }, { $push: { agrees: agree } });
+        db.collection("members-discord").updateOne({ id }, { $addToSet: { agrees: agree } }).catch(console.error);
     }
 
     removeAgreeMember(id, agree) {
-        db.collection("members-discord").updateOne({ id }, { $pull: { agrees: agree } });
+        db.collection("members-discord").updateOne({ id }, { $pull: { agrees: agree } }).catch(console.error);
     }
 
     getGradesMember(id) {
@@ -383,7 +379,7 @@ class Bot {
             db.collection("members-discord").findOne({ id }).then(doc => {
                 if (doc) return res(doc.grades);
                 return rej();
-            });
+            }).catch(rej);
         });
     }
 
@@ -392,7 +388,7 @@ class Bot {
             this.getGradesMember(id).then(grades => {
                 grades = grades.map(a => a.charAt(0).toUpperCase());
                 res(grades.length > 0 ? grades.join("-") + "》" : "");
-            });
+            }).catch(rej);
         });
     }
 
@@ -401,20 +397,20 @@ class Bot {
             this.getGradesMember(id).then(grades => {
                 var roles = this.getRolesFromGrades(grades);
                 res(roles.some(a => a.permissions.has(perm)));
-            });
+            }).catch(rej);
         });
     }
 
     addGradeMember(id, grade) {
-        if (!getLangsMember(id).includes(lang)) db.collection("members-discord").updateOne({ id }, { $push: { grades: grade } });
+        db.collection("members-discord").updateOne({ id }, { $addToSet: { grades: grade } }).catch(console.error);
     }
 
     removeGradeMember(id, grade) {
-        db.collection("members-discord").updateOne({ id }, { $pull: { grades: grade } });
+        db.collection("members-discord").updateOne({ id }, { $pull: { grades: grade } }).catch(console.error);
     }
 
     removeAllGrades(id) {
-        db.collection("members-discord").updateOne({ id }, { $set: { grades: [] } });
+        db.collection("members-discord").updateOne({ id }, { $set: { grades: [] } }).catch(console.error);
     }
 
     /**
@@ -425,7 +421,7 @@ class Bot {
     getRolesFromGrades(grades) {
         var roles = [];
         grades.forEach(grade => {
-            var role = this.guild.roles.cache.find(a => a.name.split("|")[1]?.toLocaleLowerCase().replace(/ /g, "") == grade.toLocaleLowerCase().replace(/ /g, ""));
+            var role = this.getRole(grade);
             if (role) roles.push(role);
         });
         return roles;
@@ -433,13 +429,9 @@ class Bot {
 
     getRolesFromLangs(langs) {
         var roles = [];
-        if (langs.includes("fr")) roles.push(bot.getRole("french"));
-        if (langs.includes("en")) roles.push(bot.getRole("english"));
+        if (langs.includes("fr")) roles.push(bot.getRole(bot.roles.FRENCH));
+        if (langs.includes("en")) roles.push(bot.getRole(bot.roles.ENGLISH));
         return roles;
-    }
-
-    channelError(channel) {
-        return ["Config/Channels", "The channel **" + channel + "** generates an error to send a message"];
     }
 
     errorDebug(subject, message, mention=false) {
@@ -487,7 +479,7 @@ class Bot {
             db.collection("members-discord").findOne({ id }).then(doc => {
                 if (!doc) rej();
                 res({ ...doc, maxExp: bot.getExpLvl(doc.lvl) });
-            });
+            }).catch(rej);
         });
     };
 
@@ -512,7 +504,7 @@ bot.client.on("channelCreate", channel => {
         if (createdTimestamp + 5 * 1000 < new Date().getTime()) return;
         if (channel.id != target.id) return;
         bot.log(bot.codes.CHANNEL, bot.status.CREATED, executor.id, null, { channelID: channel.id, changes, parentID: channel.parentId });
-    });
+    }).catch(console.error);
 });
 bot.client.on("channelDelete", channel => {
     bot.guild.fetchAuditLogs({ type: "CHANNEL_DELETE", limit: 1 }).then(log => {
@@ -522,17 +514,18 @@ bot.client.on("channelDelete", channel => {
         if (createdTimestamp + 5 * 1000 < new Date().getTime()) return;
         if (channel.id != target.id) return;
         bot.log(bot.codes.CHANNEL, bot.status.DELETED, executor.id, null, { channelID: channel.id, changes, parentID: channel.parentId });
-    });
+    }).catch(console.error);
 });
 bot.client.on("channelUpdate", (oldChannel, newChannel) => {
     bot.guild.fetchAuditLogs({ type: "CHANNEL_UPDATE", limit: 1 }).then(log => {
         if (!log) return;
+        if (!log.entries.first()) return;
         const { executor, changes, target, createdTimestamp } = log.entries.first();
         if (executor.bot) return;
         if (createdTimestamp + 5 * 1000 < new Date().getTime()) return;
         if (newChannel.id != target.id) return;
         bot.log(bot.codes.CHANNEL, bot.status.UPDATED, executor.id, null, { channelID: newChannel.id, changes, parentID: newChannel.parentId });
-    });
+    }).catch(console.error);
 });
 bot.client.on("guildBanAdd", ban => {
     bot.guild.fetchAuditLogs({ type: "MEMBER_BAN_ADD", limit: 1 }).then(log => {
@@ -545,8 +538,8 @@ bot.client.on("guildBanAdd", ban => {
         var id = bot.generateID();
         db.collection("bans").insertOne({ _id: id, modoID: executor.id, memberID: ban.user.id, type: bot.types.DISCORD, reason, active: true, duration: 0, endDate: new Date(), date: new Date() }).then(() => {
             bot.log(bot.codes.BAN, bot.status.OK, executor.id, ban.user.id, { reason, banID: id });
-        });
-    });
+        }).catch(console.error);
+    }).catch(console.error);
 });
 bot.client.on("guildBanRemove", ban => {
     bot.guild.fetchAuditLogs({ type: "MEMBER_BAN_REMOVE", limit: 1 }).then(log => {
@@ -558,8 +551,8 @@ bot.client.on("guildBanRemove", ban => {
 
         db.collection("bans").findOneAndUpdate({ memberID: ban.user.id, active: true }, { $set: { active: false } }, { projection: { _id: true } }).then((doc) => {
             if (doc.value) bot.log(bot.codes.UNBAN, bot.status.OK, executor.id, ban.user.id, { banID: doc.value._id });
-        });
-    });
+        }).catch(console.error);
+    }).catch(console.error);
 });
 bot.client.on("messageDelete", message => {
     if (message.author.bot) return;
@@ -581,7 +574,7 @@ bot.client.on("roleCreate", role => {
         if (createdTimestamp + 5 * 1000 < new Date().getTime()) return;
         if (role.id != target.id) return;
         bot.log(bot.codes.ROLE, bot.status.CREATED, executor.id, null, { roleID: role.id, changes });
-    });
+    }).catch(console.error);
 });
 bot.client.on("roleDelete", role => {
     bot.guild.fetchAuditLogs({ type: "ROLE_DELETE", limit: 1 }).then(log => {
@@ -591,7 +584,7 @@ bot.client.on("roleDelete", role => {
         if (createdTimestamp + 5 * 1000 < new Date().getTime()) return;
         if (role.id != target.id) return;
         bot.log(bot.codes.ROLE, bot.status.DELETED, executor.id, null, { roleID: role.id, changes });
-    });
+    }).catch(console.error);
 });
 bot.client.on("roleUpdate", (oldRole, newRole) => {
     bot.guild.fetchAuditLogs({ type: "ROLE_UPDATE", limit: 1 }).then(log => {
@@ -602,7 +595,7 @@ bot.client.on("roleUpdate", (oldRole, newRole) => {
         if (newRole.id != target.id) return;
         if (oldRole == newRole) return;
         bot.log(bot.codes.ROLE, bot.status.UPDATED, executor.id, null, { roleID: newRole.id, changes });
-    });
+    }).catch(console.error);
 });
 bot.client.on("voiceStateUpdate", (oldState, newState) => {
     bot.guild.fetchAuditLogs({ type: "MEMBER_UPDATE", limit: 1 }).then(log => {
@@ -623,7 +616,7 @@ bot.client.on("voiceStateUpdate", (oldState, newState) => {
         } else if (changes[0].key == "deaf") {
             bot.log(bot.codes.VOICE, bot.status.UNDEAFED, executor.id, newState.member.id, { channelID: newState.channelId });
         }
-    });
+    }).catch(console.error);
 
     if (oldState.channel && newState.channel && oldState.channel != newState.channel) {
         return bot.log(bot.codes.VOICE, bot.status.CHANGE, newState.member.id, null, { channelID: { before: oldState.channelId, after: newState.channelId } });
@@ -647,14 +640,14 @@ bot.client.on("guildMemberRemove", member => {
                         var id = bot.generateID();
                         db.collection("kicks").insertOne({ _id: id, modoID: executor.id, memberID: member.id, type: bot.types.DISCORD, reason, date: new Date() }).then(() => {
                             bot.log(bot.codes.KICK, bot.status.OK, executor.id, member.id, { reason, kickID: id });
-                        });
+                        }).catch(console.error);
                         return;
                     } else return;
                 }
             }
         }
         if (!bot.guild.bans.cache.has(member.id)) bot.log(bot.codes.MEMBER, bot.status.QUITED, member.id, null, {});
-    });
+    }).catch(console.error);
 });
 bot.client.on("guildMemberUpdate", (oldMember, newMember) => {
     bot.guild.fetchAuditLogs({ type: "MEMBER_ROLE_UPDATE", limit: 1 }).then(log => {
@@ -665,7 +658,7 @@ bot.client.on("guildMemberUpdate", (oldMember, newMember) => {
         if (executor.bot) return;
         if (oldMember.roles.cache == newMember.roles.cache) return;
         bot.log(bot.codes.MEMBER, bot.status.UPDATED, executor.id, newMember.id, { roles: changes });
-    });
+    }).catch(console.error);
     bot.guild.fetchAuditLogs({ type: "MEMBER_UPDATE", limit: 1 }).then(log => {
         if (!log) return;
         const { executor, changes, reason, target, createdTimestamp } = log.entries.first();
@@ -680,7 +673,7 @@ bot.client.on("guildMemberUpdate", (oldMember, newMember) => {
                 var id = bot.generateID();
                 db.collection("mutes").insertOne({ _id: id, modoID: executor.id, memberID: newMember.id, type: bot.types.DISCORD, reason, duration: new Date(date).getTime() - new Date().getTime(), endDate: new Date(date), date: new Date() }).then(() => {
                     bot.log(bot.codes.MUTE, bot.status.OK, executor.id, newMember.id, { reason, duration: new Date(date).getTime() - new Date().getTime(), muteID: id });
-                });
+                }).catch(console.error);
             } else {
                 db.collection("mutes").find({ memberID: newMember.id }).toArray((err, res) => {
                     if (err) return;
@@ -690,12 +683,12 @@ bot.client.on("guildMemberUpdate", (oldMember, newMember) => {
                     mute = mute[0];
 
                     bot.log(bot.codes.UNMUTE, bot.status.OK, executor.id, newMember.id, { muteID: mute._id });
-                });
+                }).catch(console.error);
             }
         }
         if (changes[0].key != "nick" || oldMember.nickname == newMember.nickname) return;
         bot.log(bot.codes.MEMBER, bot.status.UPDATED, executor.id, newMember.id, { nickname: { before: changes[0].old, after: changes[0].new } });
-    });
+    }).catch(console.error);
 });
 bot.client.on("guildMemberAdd", member => {
     bot.log(bot.codes.MEMBER, bot.status.JOINED, member.id, null, {});
@@ -712,10 +705,10 @@ bot.client.on('ready', async () => {
         invites.forEach(invite => {
             bot.invites.push({ id: invite.inviter.id, uses: invite.uses, code: invite.code });
         });
-    });
+    }).catch(console.error);
 
-    await bot.getChannel("rules").messages.fetch();
-    await bot.getChannel("roles").messages.fetch();
+    await bot.getChannel(bot.channels.RULES).messages.fetch();
+    await bot.getChannel(bot.channels.ROLES).messages.fetch();
 
     //commands
     bot.commands = [];
@@ -732,12 +725,12 @@ bot.client.on('ready', async () => {
                     name: props.info.name,
                     description: props.info.description.en,
                     options: props.info.options || []
-                });
+                }).catch(console.error);
             });
         }
     });
 
-    bot.getMessage("roles", bot.getChannel("roles")).catch(() => {
+    bot.getMessage("roles", bot.getChannel(bot.channels.ROLES)).catch(() => {
         var button1 = new Discord.MessageButton()
             .setCustomId('role_choice_english')
             .setLabel('I speak english')
@@ -750,14 +743,14 @@ bot.client.on('ready', async () => {
             .setStyle('SECONDARY')
             .setEmoji("🇫🇷");
 
-        bot.getChannel("roles").send({ content: "Choose your roles !", components: [new Discord.MessageActionRow().addComponents(button1, button2)] }).then(mes => {
+        bot.getChannel(bot.channels.ROLES)?.send({ content: "Choose your roles !", components: [new Discord.MessageActionRow().addComponents(button1, button2)] }).then(mes => {
             if (bot.property("messages", "roles")) {
                 bot.config.get("messages").find({ name: "roles" }).assign({ id: mes.id }).write();
             } else bot.config.get("messages").push({ name: "roles", id: mes.id }).write();
-        });
+        }).catch(console.error);
     });
 
-    bot.getMessage("rules", bot.getChannel("rules")).catch(() => {
+    bot.getMessage("rules", bot.getChannel(bot.channels.RULES)).catch(() => {
         var embed = new Discord.MessageEmbed()
             .setColor(bot.infoColor)
             .setTitle(":dagger: | New Empires - rules")
@@ -768,14 +761,14 @@ bot.client.on('ready', async () => {
             .setLabel('I have read and accepted the rules')
             .setStyle('SUCCESS');
 
-        bot.getChannel("rules").send({ embeds: [embed], components: [new Discord.MessageActionRow().addComponents(button)] }).then(mes => {
+        bot.getChannel(bot.channels.RULES)?.send({ embeds: [embed], components: [new Discord.MessageActionRow().addComponents(button)] }).then(mes => {
             if (bot.property("messages", "rules")) {
                 bot.config.get("messages").find({ name: "rules" }).assign({ id: mes.id }).write();
             } else bot.config.get("messages").push({ name: "rules", id: mes.id }).write();
-        });
+        }).catch(console.error);
     });
 
-    bot.getMessage("ticket", bot.getChannel("tickets")).catch(() => {
+    bot.getMessage("ticket", bot.getChannel(bot.channels.TICKETS)).catch(() => {
         var embed = new Discord.MessageEmbed()
             .setColor(bot.infoColor)
             .setTitle("Open a ticket")
@@ -787,14 +780,14 @@ bot.client.on('ready', async () => {
             .setStyle('PRIMARY')
             .setEmoji("📩");
 
-        bot.getChannel("tickets").send({ embeds: [embed], components: [new Discord.MessageActionRow().addComponents(button)] }).then(mes => {
+        bot.getChannel(bot.channels.TICKETS)?.send({ embeds: [embed], components: [new Discord.MessageActionRow().addComponents(button)] }).then(mes => {
             if (bot.property("messages", "ticket")) {
                 bot.config.get("messages").find({ name: "ticket" }).assign({ id: mes.id }).write();
             } else bot.config.get("messages").push({ name: "ticket", id: mes.id }).write();
-        });
+        }).catch(console.error);
     });
 
-    bot.getMessage("bug", bot.getChannel("bugs")).catch(() => {
+    bot.getMessage("bug", bot.getChannel(bot.channels.BUGS)).catch(() => {
         var embed = new Discord.MessageEmbed()
             .setColor(bot.infoColor)
             .setTitle("Report a bug")
@@ -806,11 +799,11 @@ bot.client.on('ready', async () => {
             .setStyle('PRIMARY')
             .setEmoji("📩");
 
-        bot.getChannel("bugs").send({ embeds: [embed], components: [new Discord.MessageActionRow().addComponents(button)] }).then(mes => {
+        bot.getChannel(bot.channels.BUGS)?.send({ embeds: [embed], components: [new Discord.MessageActionRow().addComponents(button)] }).then(mes => {
             if (bot.property("messages", "bug")) {
                 bot.config.get("messages").find({ name: "bug" }).assign({ id: mes.id }).write();
             } else bot.config.get("messages").push({ name: "bug", id: mes.id }).write();
-        });
+        }).catch(console.error);
     });
 
     checkExpired();
@@ -825,11 +818,13 @@ bot.client.on("inviteCreate", invite => {
 });
 
 bot.client.on("guildMemberAdd", async (member) => {
-    createMember(member.id, member.user.username, member.user.discriminator, member.user.avatarURL());
+    bot.getMemberInfo(member.id).catch(() => {
+        createMember(member.id, member.user.username, member.user.discriminator, member.user.avatarURL());
+    });
 
-    var channel = bot.getChannel("gate");
-    var rules = bot.getChannel("rules");
-    var roles = bot.getChannel("roles");
+    var channel = bot.getChannel(bot.channels.GATE);
+    var rules = bot.getChannel(bot.channels.RULES);
+    var roles = bot.getChannel(bot.channels.ROLES);
     var inv = "";
     await getInviter().then(val => inv = val).catch(console.error);
     if (!inv) bot.errorDebug("Invite/Inviter", "Error to get the inviter !");
@@ -837,32 +832,24 @@ bot.client.on("guildMemberAdd", async (member) => {
     var agrees = await bot.getAgreesMember(member.id).catch(console.error);
     var langs = await bot.getLangsMember(member.id).catch(console.error);
 
-    if (channel && rules && roles) {
-        channel.send(":airplane_arriving: <@" + member.id + "> joined the server" + (inv ? ("by <@" + inv + "> !") : " !")).catch(() => {
-            bot.errorDebug(...bot.channelError(channel))
-        });
+    channel?.send(":airplane_arriving: <@" + member.id + "> joined the server" + (inv ? ("by <@" + inv + "> !") : " !")).catch(console.error);
 
-        if (!agrees || agrees.length == 0 || !agrees.includes("rules")) {
-            rules.permissionOverwrites.create(member, { VIEW_CHANNEL: true });
-        }
-        else if (!langs || langs.length == 0) {
-            roles.permissionOverwrites.create(member, { VIEW_CHANNEL: true });
-        }
-        else if (grades?.length > 0 || langs.length > 0) {
-            member.roles.add(bot.getRole("member"));
-            if (grades) member.roles.add(bot.getRolesFromGrades(grades));
-            if (langs) member.roles.add(bot.getRolesFromLangs(langs));
-        }
-    } else bot.errorDebug(...bot.channelError(channel));
+    if (!agrees || agrees.length == 0 || !agrees.includes("rules")) {
+        rules?.permissionOverwrites.create(member, { VIEW_CHANNEL: true });
+    }
+    else if (!langs || langs.length == 0) {
+        roles?.permissionOverwrites.create(member, { VIEW_CHANNEL: true });
+    }
+    else if (grades?.length > 0 || langs?.length > 0) {
+        await member.roles.add(bot.getRole(bot.roles.MEMBER));
+        if (grades) await member.roles.add(bot.getRolesFromGrades(grades));
+        if (langs) await member.roles.add(bot.getRolesFromLangs(langs));
+    }
 });
 
 bot.client.on("guildMemberRemove", (member) => {
-    var channel = bot.getChannel("gate");
-    if (channel && channel.type == "GUILD_TEXT") {
-        channel.send(":airplane_departure: **" + member.user.tag + "** left the server !").catch(() => {
-            bot.errorDebug(...bot.channelError(channel))
-        });
-    } else bot.errorDebug(...bot.channelError(channel));
+    var channel = bot.getChannel(bot.channels.GATE);
+    channel.send(":airplane_departure: **" + member.user.tag + "** left the server !").catch(console.error);
 });
 
 bot.client.on("interactionCreate", async interaction => {
@@ -871,7 +858,13 @@ bot.client.on("interactionCreate", async interaction => {
     var lang = await bot.getLangMember(interaction.member.id).catch(console.error);
 
     var cmd = bot.commands.find(a => interaction.commandName.startsWith(a.infos.name));
-    if (cmd) cmd.cmd.run(bot, interaction, lang, db);
+    try {
+        if (cmd) cmd.cmd.run(bot, interaction, lang, db);
+    }
+    catch(err) {
+        console.error(err);
+        interaction.reply({content: "Unexpected error !", ephemeral: true});
+    }
 });
 
 bot.client.on("interactionCreate", async interaction => {
@@ -886,21 +879,19 @@ bot.client.on("interactionCreate", async interaction => {
         var langs = await bot.getLangsMember(member.id).catch(console.error);
 
         if (!agrees || !agrees.includes("rules")) {
-            var rules = bot.getChannel("rules");
-            if (!rules) return bot.errorDebug(...bot.channelError(rules));
-            rules.permissionOverwrites.delete(member);
+            var rules = bot.getChannel(bot.channels.RULES);
+            rules?.permissionOverwrites.delete(member);
 
             bot.addAgreeMember(member.id, "rules")
 
             if (!langs || langs.length == 0) {
-                var c = bot.getChannel("roles");
-                if (!c) return bot.errorDebug(...bot.channelError(c));
-                c.permissionOverwrites.create(member, { VIEW_CHANNEL: true });
+                var c = bot.getChannel(bot.channels.ROLES);
+                c?.permissionOverwrites.create(member, { VIEW_CHANNEL: true });
             }
             else {
-                member.roles.add(bot.getRole("member"));
-                if (grades) member.roles.add(bot.getRolesFromGrades(grades));
-                if (langs) member.roles.add(bot.getRolesFromLangs(langs));
+                await member.roles.add(bot.getRole(bot.roles.MEMBER));
+                if (grades) await member.roles.add(bot.getRolesFromGrades(grades));
+                if (langs) await member.roles.add(bot.getRolesFromLangs(langs));
             }
         }
     }
@@ -927,48 +918,46 @@ bot.client.on("interactionCreate", async interaction => {
         var langs = await bot.getLangsMember(member.id).catch(console.error);
         if (!langs) return;
 
-        var fr = bot.getRole("french");
-        var en = bot.getRole("english");
-        if (!fr || !en) return bot.errorDebug("Config/Role", "Cannot get role FRENCH or ENGLISH");
+        var fr = bot.getRole(bot.roles.FRENCH);
+        var en = bot.getRole(bot.roles.ENGLISH);
 
         if (interaction.customId.includes("french")) {
-            if (langs.includes("fr")) {
-                if (!langs.includes("en")) {
+            if (langs?.includes("fr")) {
+                if (!langs?.includes("en")) {
                     interaction.reply({ content: ":x: You must to have at least 1 role", ephemeral: true });
                 } else {
                     interaction.reply({ content: ":heavy_minus_sign: Rôle retiré !", ephemeral: true });
-                    member.roles.remove(fr.id);
+                    member.roles.remove(fr?.id);
                     bot.removeLangMember(member.id, "fr");
                 }
             } else {
                 interaction.reply({ content: ":heavy_plus_sign: Rôle ajouté !", ephemeral: true });
-                member.roles.add(fr.id);
+                member.roles.add(fr?.id);
                 bot.addLangMember(member.id, "fr");
             }
         }
 
         if (interaction.customId.includes("english")) {
-            if (langs.includes("en")) {
-                if (!langs.includes("fr")) {
+            if (langs?.includes("en")) {
+                if (!langs?.includes("fr")) {
                     interaction.reply({ content: ":x: You must to have at least 1 role", ephemeral: true });
                 } else {
                     interaction.reply({ content: ":heavy_minus_sign: Role removed !", ephemeral: true });
-                    member.roles.remove(en.id);
+                    member.roles.remove(en?.id);
                     bot.removeLangMember(member.id, "en");
                 }
             } else {
                 interaction.reply({ content: ":heavy_plus_sign: Role added !", ephemeral: true });
-                member.roles.add(en.id);
+                member.roles.add(en?.id);
                 bot.addLangMember(member.id, "en");
             }
         }
 
         if (member.roles.cache.size == 1) {
-            var c = bot.getChannel("roles");
-            if (!c) return bot.errorDebug(...bot.channelError(c));
-            c.permissionOverwrites.delete(member);
+            var c = bot.getChannel(bot.channels.ROLES);
+            c?.permissionOverwrites.delete(member);
 
-            member.roles.add(bot.getRole("member").id).catch(() => {
+            member.roles.add(bot.getRole(bot.roles.MEMBER)?.id).catch(() => {
                 bot.errorDebug("Adding Role", "Unable to add role to new member !")
             });
         }
@@ -988,26 +977,26 @@ function deleteReport(type, interaction) {
 }
 
 async function createReport(type, interaction) {
-    if (!bot.getCategorie(type)) await bot.guild.channels.create("▁▃▅▇ " + type + " ▇▅▃▁", { type: "GUILD_CATEGORY", permissionOverwrites: [{ id: bot.guild.id, deny: ["VIEW_CHANNEL"] }, { id: bot.guild.roles.cache.find(a => a.name.includes("staff")).id, allow: ["VIEW_CHANNEL"] }] }).then(cha => {
+    if (!bot.getCategory(type)) await bot.guild.channels.create("▁▃▅▇ " + type + " ▇▅▃▁", { type: "GUILD_CATEGORY", permissionOverwrites: [{ id: bot.guild.id, deny: ["VIEW_CHANNEL"] }, { id: bot.getRole(bot.roles.STAFF), allow: ["VIEW_CHANNEL"] }] }).then(cha => {
         if (bot.property("categories", type)) {
             bot.config.get("categories").find({ name: type }).assign({ id: cha.id }).write();
         } else bot.config.get("categories").push({ name: type, id: cha.id }).write();
-    });
+    }).catch(console.error);
 
-    var c = bot.getCategorie(type);
+    var c = bot.getCategory(type);
 
     var n = 1;
     var channels = bot.guild.channels.cache.filter(a => a.parentId == c.id);
     if (channels.size > 0) {
         var memberChannels = channels.filter(a => a.name.split("-")[1] == interaction.member.id);
         if (memberChannels.size >= 5) {
-            return interaction.reply({ content: ":x: You have reached the maximum number of reports (5)", ephemeral: true })
+            return interaction.reply({ content: ":x: You have reached the maximum number of reports (5)", ephemeral: true });
         }
 
         n = Number(channels.sort((a, b) => Number(b.name.split("-")[0]) - Number(a.name.split("-")[0])).first().name.split("-")[0]) + 1;
     }
 
-    bot.guild.channels.create(n.toString().padStart(3, "0") + "-" + interaction.member.id, { type: "GUILD_TEXT", permissionOverwrites: [{ id: interaction.member.id, allow: ["VIEW_CHANNEL"] }, { id: bot.guild.id, deny: ["VIEW_CHANNEL"] }, { id: bot.guild.roles.cache.find(a => a.name.includes("staff")).id, allow: ["VIEW_CHANNEL"] }], parent: c }).then(async cha => {
+    bot.guild.channels.create(n.toString().padStart(3, "0") + "-" + interaction.member.id, { type: "GUILD_TEXT", permissionOverwrites: [{ id: interaction.member.id, allow: ["VIEW_CHANNEL"] }, { id: bot.guild.id, deny: ["VIEW_CHANNEL"] }, { id: bot.getRole(bot.roles.STAFF), allow: ["VIEW_CHANNEL"] }], parent: c }).then(async cha => {
         cha.send({
             embeds: [new Discord.MessageEmbed().setColor(bot.infoColor)
                 .setTitle(":dagger: | New Empires - report")
@@ -1024,12 +1013,12 @@ async function createReport(type, interaction) {
                 .setLabel('Delete report')
                 .setStyle('DANGER')
                 .setEmoji("🗑️"))]
-        });
+        }).catch(console.error);
 
         bot.log(bot.codes.REPORT, bot.status.OK, interaction.member.id, null, { index: n, channelID: cha.id, type: type.slice(0, -1) });
 
         interaction.reply({ content: ":white_check_mark: Report created <#" + cha.id + "> !", ephemeral: true });
-    });
+    }).catch(console.error);
 }
 
 bot.client.on("messageCreate", mes => {
@@ -1063,7 +1052,7 @@ async function getInviter() {
         invites.forEach(invite => {
             n.push({ id: invite.inviter.id, uses: invite.uses, code: invite.code });
         });
-    });
+    }).catch(console.error);
     var invite = bot.invites.find(a => a.uses < n.find(b => b.id == a.id && b.code == a.code).uses);
     bot.invites = n;
     return invite?.id;
@@ -1087,32 +1076,32 @@ function addExp(user, _exp, callback) {
     bot.getMemberInfo(user.id).then(res => {
         var exp = getExp(_exp + res.exp, res.lvl);
         var lvl = getLevel(_exp + res.exp, res.lvl);
-        db.collection("members-discord").updateOne({ id: user.id }, { $set: { exp, lvl } });
+        db.collection("members-discord").updateOne({ id: user.id }, { $set: { exp, lvl } }).catch(console.error);
         if (lvl != res.lvl) callback(lvl);
-    });
+    }).catch(console.error);
 }
 
 function createMember(id, username, discriminator, avatar) {
-    db.collection("members-discord").insertOne({ _id: bot.generateID(), id: id, lastUsername: username, lastDiscriminator: discriminator, exp: 0, lvl: 1, lastAvatarURL: avatar, langs: [], agrees: [], grades: [], date: new Date() });
+    db.collection("members-discord").insertOne({ _id: bot.generateID(), id: id, lastUsername: username, lastDiscriminator: discriminator, exp: 0, lvl: 1, lastAvatarURL: avatar, langs: [], agrees: [], grades: [], date: new Date() }).catch(console.error);
 }
 
 const update = bot.libs.schedule.scheduleJob('0 */3 * * *', async () => {
-    await db.collection("members-discord").updateMany({}, { $setOnInsert: { grades: [], langs: [], agrees: [], date: new Date() } }).catch(console.error).catch(console.error);
+    await db.collection("members-discord").updateMany({}, { $setOnInsert: { grades: [], langs: [], agrees: [], date: new Date() } }).catch(console.error);
 
     Object.values(bot.grades).concat(Object.values(bot.roles)).forEach(grade => {
-       if(!bot.guild.roles.cache.find(a => a.name.includes(grade))) {
+       if(!bot.getRole(grade)) {
            bot.errorDebug("ROLES - IMPORTANT", "Role not found: **" + grade + "**", true);
        }
     });
 
     Object.values(bot.channels).forEach(channel => {
-        if(!bot.guild.channels.cache.find(a => a.name.includes(channel) && a.type != "GUILD_CATEGORY")) {
+        if(!bot.getChannel(channel)) {
             bot.errorDebug("CHANNELS - IMPORTANT", "Channel not found: **" + channel + "**", true);
         }
     });
 
     Object.values(bot.categories).forEach(category => {
-        if(!bot.guild.channels.cache.find(a => a.name.includes(category) && a.type == "GUILD_CATEGORY")) {
+        if(!bot.getCategory(category)) {
             bot.errorDebug("CATEGORIES - IMPORTANT", "Category not found: **" + category + "**", true);
         }
     });
@@ -1125,12 +1114,15 @@ const update = bot.libs.schedule.scheduleJob('0 */3 * * *', async () => {
                 }
                 var grades = res.grades;
                 var langs = res.langs;
+                var agrees = res.agrees;
+
+                if(agrees.length == 0 || langs.length == 0) return;
 
                 var gradeRoles = bot.getRolesFromGrades(grades);
                 var langRoles = bot.getRolesFromLangs(langs);
 
-                if(gradeRoles.length != 0) gradeRoles.push(bot.guild.roles.cache.find(a => a.name.includes("staff")));
-                gradeRoles.push(bot.guild.roles.cache.find(a => a.name.includes("member")));
+                if(gradeRoles.length != 0) gradeRoles.push(bot.getRole(bot.roles.STAFF));
+                gradeRoles.push(bot.getRole(bot.roles.MEMBER));
 
                 gradeRoles = gradeRoles.map(a => a.id);
                 langRoles = langRoles.map(a => a.id);
@@ -1143,7 +1135,7 @@ const update = bot.libs.schedule.scheduleJob('0 */3 * * *', async () => {
                 roles.forEach(id => {
                     if(!member.roles.cache.has(id)) member.roles.add(bot.guild.roles.cache.get(id));
                 });
-            }).catch(() => createMember(member.id, member.user.username, member.user.discriminator, member.user.avatarURL()));
+            }).catch(console.error);
         }
 
         var prefix = member.user.bot ? "B》" : await bot.getGradesPrefix(member.id).catch(console.error);
@@ -1156,13 +1148,13 @@ const update = bot.libs.schedule.scheduleJob('0 */3 * * *', async () => {
     });
 
     bot.guild.members.cache.filter(a => a.roles.cache.size == 1 && a.joinedTimestamp + 1000 * 60 * 60 * 24 <= new Date().getTime()).forEach(async member => {
-        await member.send("You have been kicked because you did not accept the rules or recover a role in the last 24 hours\nInvite: https://discord.gg/" + await getServerInvitation()).catch(console.error);
+        await member.send("You have been kicked because you did not accept the rules or recover a role in the last 24 hours\nInvite: https://discord.gg/" + (await getServerInvitation().catch(console.error))).catch(console.error);
         bot.kick(member, bot.client.user, "inactive (auto)", bot.status.AUTOMATIC);
     });
 });
 
 async function checkExpired() {
-    var bans = await db.collection("bans").find({ active: true, endDate: { $lt: new Date() }, duration: { $ne: 0 } }, { projection: { memberID: true, _id: true, endDate: true } }).toArray();
+    var bans = await db.collection("bans").find({ active: true, endDate: { $lt: new Date() }, duration: { $ne: 0 } }, { projection: { memberID: true, _id: true, endDate: true } }).toArray().catch(console.error);
     bans.forEach(ban => {
         bot.unban(ban.memberID, ban._id);
     });
@@ -1174,8 +1166,7 @@ function getServerInvitation() {
     return new Promise((res, rej) => {
         var prop = bot.property("info", "invite");
         if (prop) return res(prop.code);
-        var cha = bot.getChannel("rules");
-        if (!cha) return rej(bot.errorDebug(...bot.channelError(cha)));
+        var cha = bot.getChannel(bot.channels.RULES);
         bot.guild.invites.create(cha, { maxAge: 0, maxUses: 0 }).then(inv => {
             bot.config.get("info").push({ name: "invite", code: inv.code }).write();
             res(inv.code);

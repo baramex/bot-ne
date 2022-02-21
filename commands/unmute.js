@@ -1,11 +1,11 @@
-module.exports.run = (bot, interaction, lang, db) => {
+module.exports.run = async (bot, interaction, lang, db) => {
     var modo = interaction.member;
     try {
         var member = interaction.options.getMember("mention", true);
     } catch (err) {}
 
     if (member) {
-        if (!isGradePermission(modo.id, "MUTE_MEMBERS")) {
+        if (!(await bot.isGradePermission(modo.id, "MUTE_MEMBERS"))) {
             bot.log(bot.codes.UNMUTE, bot.status.NOT_PERMISSION, modo.id, member.id, {});
             return interaction.reply({ embeds: [bot.embedNotPerm(lang)] });
         }

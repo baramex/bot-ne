@@ -1,20 +1,20 @@
-module.exports.run = (bot, interaction, lang, db) => {
+module.exports.run = async (bot, interaction, lang, db) => {
     var modo = interaction.member;
     var member = interaction.options.getMember("mention", false) || modo;
 
-    if (!bot.isGradePermission(modo.id, "VIEW_AUDIT_LOG")) {
+    if (!(await bot.isGradePermission(modo.id, "VIEW_AUDIT_LOG"))) {
         return interaction.reply({ embeds: [bot.embedNotPerm(lang)] });
     }
 
     bot.getMemberInfo(member.id).then(async level => {
         if (!level) return interaction.reply("Member not found !");
-        var b = await db.collection("bans").find({ memberID: member.id }).count();
-        var k = await db.collection("kicks").find({ memberID: member.id }).count();
-        var m = await db.collection("mutes").find({ memberID: member.id }).count();
-        var w = await db.collection("warns").find({ memberID: member.id }).count();
+        var b = await db.collection("bans").find({ memberID: member.id }).count().catch(console.error);
+        var k = await db.collection("kicks").find({ memberID: member.id }).count().catch(console.error);
+        var m = await db.collection("mutes").find({ memberID: member.id }).count().catch(console.error);
+        var w = await db.collection("warns").find({ memberID: member.id }).count().catch(console.error);
 
         var exps = db.collection("members-discord").find(null, { projection: { lvl: true, exp: true } });
-        var arr = await exps.toArray();
+        var arr = await exps.toArray().catch(console.error);
 
         var rank = 1;
         arr.forEach(m => {
