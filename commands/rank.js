@@ -1,6 +1,6 @@
 module.exports.run = async(bot, interaction, lang, db) => {
     var exps = db.collection("members-discord").find(null, { projection: { lvl: true, exp: true, lastAvatarURL: true, id: true } });
-    var arr = await exps.toArray();
+    var arr = await exps.toArray().catch(console.error);
 
     arr.sort((a, b) => {
         if (a.lvl != b.lvl) return b.lvl - a.lvl;

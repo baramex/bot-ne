@@ -31,10 +31,6 @@ module.exports.run = (bot, interaction, lang, db) => {
         ctx.fill();
         ctx.stroke();
 
-        /*ctx.strokeStyle = "rgba(220, 220, 220, 0.5)";
-        roundedRect(ctx, 9, 9, width - 18, height - 18, 20);
-        ctx.stroke();*/
-
         ctx.fillStyle = "rgb(20, 20, 20)";
         ctx.beginPath();
         ctx.arc(height * 0.45 + 15, height / 2, height * 0.45, 0, 2 * Math.PI, false);
@@ -97,7 +93,7 @@ module.exports.run = (bot, interaction, lang, db) => {
 
         const attach = new bot.libs.discord.MessageAttachment(canvas.toBuffer(), "card.png");
         interaction.reply({ files: [attach] });
-    });
+    }).catch(console.error);
 };
 
 function roundedRect(ctx, x, y, width, height, radius) {

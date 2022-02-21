@@ -1,16 +1,16 @@
 const BSON = require("bson");
 
-module.exports.run = async(bot, interaction, lang, db) => {
-    if (!isGradePermission(interaction.member.id, "VIEW_AUDIT_LOG")) {
+module.exports.run = async (bot, interaction, lang, db) => {
+    if (!(await bot.isGradePermission(interaction.member.id, "VIEW_AUDIT_LOG"))) {
         return interaction.reply({ embeds: [bot.embedNotPerm(lang)] });
     }
 
-    var size = (await db.collection("logs").stats()).totalSize;
-    var docs = await db.collection("logs").countDocuments();
-    var lastDate = (await db.collection("logs").find({}).sort({ date: -1 }).limit(1).toArray())[0];
+    var size = (await db.collection("logs").stats().catch(console.error)).totalSize;
+    var docs = await db.collection("logs").countDocuments().catch(console.error);
+    var lastDate = (await db.collection("logs").find({}).sort({ date: -1 }).limit(1).toArray().catch(console.error))[0];
     var todayDate = new Date();
     todayDate.setHours(0);
-    var todays = (await db.collection("logs").find({date: {$gte: todayDate}}).toArray()).length
+    var todays = (await db.collection("logs").find({date: {$gte: todayDate}}).toArray().catch(console.error)).length
 
     var embed = new bot.libs.discord.MessageEmbed()
         .setColor(bot.infoColor)

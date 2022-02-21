@@ -1,18 +1,18 @@
-module.exports.run = (bot, interaction, lang, db) => {
+module.exports.run = async (bot, interaction, lang, db) => {
     var modo = interaction.member;
     try {
         var member = interaction.options.getString("id", true);
     } catch (err) {}
 
     if (member) {
-        if (!isGradePermission(modo.id, "BAN_MEMBERS")) {
+        if (!(await bot.isGradePermission(modo.id, "BAN_MEMBERS"))) {
             bot.log(bot.codes.UNBAN, bot.status.NOT_PERMISSION, modo.id, member, {});
             return interaction.reply({ embeds: [bot.embedNotPerm(lang)] });
         }
 
         db.collection("bans").findOneAndUpdate({ memberID: member, active: true }, { $set: { active: false } }, { projection: { _id: true } }).then((doc) => {
             if (doc.value) {
-                bot.guild.members.unban(member)
+                bot.guild.members.unban(member);
 
                 var embed = new bot.libs.discord.MessageEmbed()
                     .setColor(bot.validColor)
@@ -37,7 +37,7 @@ module.exports.run = (bot, interaction, lang, db) => {
 
                 interaction.reply({ embeds: [embed] });
             }
-        });
+        }).catch(console.error);
     }
 };
 

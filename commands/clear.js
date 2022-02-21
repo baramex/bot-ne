@@ -1,10 +1,10 @@
-module.exports.run = (bot, interaction, lang, db) => {
+module.exports.run = async (bot, interaction, lang, db) => {
     var modo = interaction.member;
     try {
         var nb = interaction.options.getNumber("nb-message", true);
     } catch (error) {}
 
-    if (!isGradePermission(modo.id, "MANAGE_MESSAGES")) {
+    if (!(await bot.isGradePermission(modo.id, "MANAGE_MESSAGES"))) {
         bot.log(bot.codes.BULK_DELETE, bot.status.NOT_PERMISSION, modo.id, null, {});
         return interaction.reply({ embeds: [bot.embedNotPerm(lang)] });
     }
@@ -16,7 +16,7 @@ module.exports.run = (bot, interaction, lang, db) => {
             .setFooter({ text: bot.footerAuthor.text + " | " + lang.toUpperCase(), iconURL: bot.footerAuthor.iconURL })
             .addField("Argument", lang == "fr" ? "L'argument *nb-message* doit être compris entre 2 et 100" : "The argument *nb-message* must be between 1 and 99", true)
         bot.log(bot.codes.BULK_DELETE, bot.status.ERROR_ARGUMENT, modo.id, null, { argument_name: "nb-message", argument_value: nb });
-        interaction.reply({ embeds: [embed] });
+        interaction.reply({ embeds: [embed] }).catch(console.error);
     } else {
         interaction.channel.bulkDelete(nb).then(mes => {
             interaction.reply(mes.size + (lang == "fr" ? " messages supprimés" : " messages deleted"));
