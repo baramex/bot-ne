@@ -21,7 +21,7 @@ module.exports.run = async (bot, interaction, lang, db) => {
                     else {
                         var embed = new bot.libs.discord.MessageEmbed()
                             .setColor(bot.validColor)
-                            .setTitle(":dagger: | New Empires - get")
+                            .setTitle(":dagger: | New Empires - get " + sub)
                             .setFooter({ text: bot.footerAuthor.text + " | " + lang.toUpperCase(), iconURL: bot.footerAuthor.iconURL })
                             .addField("ID", id, true)
                         if (res.date) embed.addField("Date", bot.formatDate(res.date), true);
@@ -94,7 +94,7 @@ module.exports.run = async (bot, interaction, lang, db) => {
                 l.forEach((res, i) => {
                     var embed = new bot.libs.discord.MessageEmbed()
                         .setColor(bot.validColor)
-                        .setTitle(":dagger: | New Empires - get")
+                        .setTitle(":dagger: | New Empires - get " + sub)
                         .setFooter({ text: bot.footerAuthor.text + " | " + lang.toUpperCase(), iconURL: bot.footerAuthor.iconURL })
                         .addField("Index", i.toString() || "0", true)
                         .addField("ID", res._id, true)

@@ -445,10 +445,7 @@ class Bot {
             .addField("Subject", subject, true)
             .addField("Description", message, true)
 
-        if (mention) {
-            channel?.send("<@everyone: DEBUG ERROR>");
-        }
-        channel?.send({ embeds: [embed] });
+        channel?.send({ content: mention?"<@everyone: DEBUG ERROR>":"", embeds: [embed] });
     }
 
     formatDate(dateObj) {
