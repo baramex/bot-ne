@@ -2,7 +2,7 @@ module.exports.run = async (bot, interaction, lang, db) => {
     var modo = interaction.member;
     var member = interaction.options.getMember("mention", false) || modo;
 
-    if (!(await bot.isGradePermission(modo.id, "VIEW_AUDIT_LOG"))) {
+    if (!(await bot.isGradePermission(modo.id, "VIEW_AUDIT_LOG").catch(console.error))) {
         return interaction.reply({ embeds: [bot.embedNotPerm(lang)] });
     }
 
