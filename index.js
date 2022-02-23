@@ -14,7 +14,7 @@ require("dotenv").config();
 var db;
 
 MongoClient.connect(process.env.DB, function (err, client) {
-    if(err) {
+    if (err) {
         console.error("Mongodb error");
         return process.exit(1);
     }
@@ -55,7 +55,8 @@ class Bot {
             MESSAGE: 4009,
             ROLE: 4012,
             VOICE: 4013,
-            MEMBER: 4014
+            MEMBER: 4014,
+            MANAGE_GRADES: 4015
         };
         this.status = {
             OK: 200,
@@ -76,7 +77,8 @@ class Bot {
             UNDEAFED: 210,
             KICKED: 211,
             MOVE: 212,
-            CHANGE: 213
+            CHANGE: 213,
+            CANCELLED: 402
         };
         this.statusEmoji = {
             200: ":white_check_mark:",
@@ -96,6 +98,7 @@ class Bot {
             403: ":no_entry_sign:",
             401: ":x:",
             201: ":clock1:",
+            402: ":no_entry_sign:",
             404: ":grey_question:",
             406: ":x:"
         };
@@ -125,12 +128,12 @@ class Bot {
             MINECRAFT: "MINECRAFT"
         };
         this.grades = {
+            BOT: "bot",
             FOUNDER: "founder",
             DEVELOPER: "developer",
-            MODERATOR: "moderator",
             ADMINISTRATOR: "administrator",
+            MODERATOR: "moderator",
             BUILDER: "builder",
-            BOT: "bot",
             DISCORD_MODERATOR: "discord moderator"
         };
         this.channels = {
@@ -378,7 +381,7 @@ class Bot {
         return new Promise((res, rej) => {
             db.collection("members-discord").findOne({ id }).then(doc => {
                 if (doc) return res(doc.grades);
-                return rej();
+                return rej("user not found");
             }).catch(rej);
         });
     }
@@ -386,6 +389,7 @@ class Bot {
     getGradesPrefix(id) {
         return new Promise((res, rej) => {
             this.getGradesMember(id).then(grades => {
+                if(!grades) rej("grades not found");
                 grades = grades.map(a => a.charAt(0).toUpperCase());
                 res(grades.length > 0 ? grades.join("-") + "》" : "");
             }).catch(rej);
@@ -413,18 +417,79 @@ class Bot {
         db.collection("members-discord").updateOne({ id }, { $set: { grades: [] } }).catch(console.error);
     }
 
+    async updatePseudo(member) {
+        var prefix = member.user.bot ? "B》" : await this.getGradesPrefix(member.id).catch(console.error);
+        if (member.nickname != prefix + member.user.username || (!prefix && member.nickname)) {
+            if (member.manageable) {
+                if (!prefix) member.setNickname("");
+                else member.setNickname(prefix + member.user.username);
+            }
+        }
+    }
+
+    async updateRoles(member) {
+        await this.getMemberInfo(member.id).then(async res => {
+            var grades = res.grades;
+            var langs = res.langs;
+            var agrees = res.agrees;
+
+            if(!agrees || !langs || !grades) return;
+
+            if (agrees.length == 0 || langs.length == 0) return;
+
+            var gradeRoles = this.getRolesFromGrades(grades);
+            var langRoles = this.getRolesFromLangs(langs);
+
+            if (gradeRoles.length != 0) gradeRoles.push(this.getRole(this.roles.STAFF));
+            gradeRoles.push(this.getRole(this.roles.MEMBER));
+
+            gradeRoles = gradeRoles.map(a => a.id);
+            langRoles = langRoles.map(a => a.id);
+
+            var roles = gradeRoles.concat(langRoles);
+
+            await member.roles.cache.forEach(async role => {
+                if (!roles.includes(role.id) && role.id != this.guild.roles.everyone.id) await member.roles.remove(role.id);
+            });
+            await roles.forEach(async id => {
+                if (!member.roles.cache.has(id)) await member.roles.add(this.guild.roles.cache.get(id));
+            });
+        }).catch(console.error);
+    }
+
     /**
      * 
      * @param {string[]} grades 
      * @returns {Discord.Role[]}
      */
     getRolesFromGrades(grades) {
+        if (!grades) return false;
         var roles = [];
         grades.forEach(grade => {
             var role = this.getRole(grade);
             if (role) roles.push(role);
         });
         return roles;
+    }
+
+    /**
+     * 
+     * @param {Discord.Role[]} roles 
+     * @returns {Discord.Role}
+     */
+    getHighestRole(roles) {
+        return roles.find(a => roles.every(b => a.position > b.position || a.id == b.id));
+    }
+
+    async isHighestGrade(modoId, memberId) {
+        var modoG = this.getRolesFromGrades(await this.getGradesMember(modoId).catch(console.error));
+        var g = await this.getGradesMember(memberId).catch(console.error);
+        if (!g) return false;
+        var memberG = this.getRolesFromGrades(g);
+        var modoH = this.getHighestRole(modoG);
+        var memberH = memberG.length ? this.getHighestRole(memberG) : -1;
+        if (modoH.position > (memberH.position || memberH)) return true;
+        return false;
     }
 
     getRolesFromLangs(langs) {
@@ -434,7 +499,7 @@ class Bot {
         return roles;
     }
 
-    errorDebug(subject, message, mention=false) {
+    errorDebug(subject, message, mention = false) {
         var channel = bot.guild.channels.cache.find(a => a.name.includes("staff-chat"));
         var embed = new Discord.MessageEmbed()
             .setColor(bot.warningColor)
@@ -445,10 +510,7 @@ class Bot {
             .addField("Subject", subject, true)
             .addField("Description", message, true)
 
-        if (mention) {
-            channel?.send("<@everyone: DEBUG ERROR>");
-        }
-        channel?.send({ embeds: [embed] });
+        channel?.send({ content: mention ? "<@everyone: DEBUG ERROR>" : "", embeds: [embed] });
     }
 
     formatDate(dateObj) {
@@ -474,10 +536,10 @@ class Bot {
         return ((level * 100 + level * 30) * (Math.round(level / 5) + 1));
     }
 
-    getMemberInfo(id){
+    getMemberInfo(id) {
         return new Promise((res, rej) => {
             db.collection("members-discord").findOne({ id }).then(doc => {
-                if (!doc) rej();
+                if (!doc) rej("user not found");
                 res({ ...doc, maxExp: bot.getExpLvl(doc.lvl) });
             }).catch(rej);
         });
@@ -861,9 +923,9 @@ bot.client.on("interactionCreate", async interaction => {
     try {
         if (cmd) cmd.cmd.run(bot, interaction, lang, db);
     }
-    catch(err) {
+    catch (err) {
         console.error(err);
-        interaction.reply({content: "Unexpected error !", ephemeral: true});
+        interaction.reply({ content: "Unexpected error !", ephemeral: true });
     }
 });
 
@@ -1086,22 +1148,20 @@ function createMember(id, username, discriminator, avatar) {
 }
 
 const update = bot.libs.schedule.scheduleJob('0 */3 * * *', async () => {
-    await db.collection("members-discord").updateMany({}, { $setOnInsert: { grades: [], langs: [], agrees: [], date: new Date() } }).catch(console.error);
-
     Object.values(bot.grades).concat(Object.values(bot.roles)).forEach(grade => {
-       if(!bot.getRole(grade)) {
-           bot.errorDebug("ROLES - IMPORTANT", "Role not found: **" + grade + "**", true);
-       }
+        if (!bot.getRole(grade)) {
+            bot.errorDebug("ROLES - IMPORTANT", "Role not found: **" + grade + "**", true);
+        }
     });
 
     Object.values(bot.channels).forEach(channel => {
-        if(!bot.getChannel(channel)) {
+        if (!bot.getChannel(channel)) {
             bot.errorDebug("CHANNELS - IMPORTANT", "Channel not found: **" + channel + "**", true);
         }
     });
 
     Object.values(bot.categories).forEach(category => {
-        if(!bot.getCategory(category)) {
+        if (!bot.getCategory(category)) {
             bot.errorDebug("CATEGORIES - IMPORTANT", "Category not found: **" + category + "**", true);
         }
     });
@@ -1112,38 +1172,31 @@ const update = bot.libs.schedule.scheduleJob('0 */3 * * *', async () => {
                 if (res.lastUsername != member.user.username || res.lastAvatarURL != member.user.avatarURL() || res.lastDiscriminator != member.user.discriminator) {
                     db.collection("members-discord").updateOne({ id: member.id }, { $set: { lastUsername: member.user.username, lastDiscriminator: member.user.discriminator, lastAvatarURL: member.user.avatarURL() } }).catch(console.error);
                 }
-                var grades = res.grades;
-                var langs = res.langs;
-                var agrees = res.agrees;
-
-                if(agrees.length == 0 || langs.length == 0) return;
-
-                var gradeRoles = bot.getRolesFromGrades(grades);
-                var langRoles = bot.getRolesFromLangs(langs);
-
-                if(gradeRoles.length != 0) gradeRoles.push(bot.getRole(bot.roles.STAFF));
-                gradeRoles.push(bot.getRole(bot.roles.MEMBER));
-
-                gradeRoles = gradeRoles.map(a => a.id);
-                langRoles = langRoles.map(a => a.id);
-
-                var roles = gradeRoles.concat(langRoles);
-
-                member.roles.cache.forEach(role => {
-                    if(!roles.includes(role.id) && role.id != bot.guild.roles.everyone.id) member.roles.remove(role.id);
-                });
-                roles.forEach(id => {
-                    if(!member.roles.cache.has(id)) member.roles.add(bot.guild.roles.cache.get(id));
-                });
             }).catch(console.error);
+            await bot.updateRoles(member);
         }
 
-        var prefix = member.user.bot ? "B》" : await bot.getGradesPrefix(member.id).catch(console.error);
-        if (member.nickname != prefix + member.user.username || (!prefix && member.nickname)) {
-            if (member.manageable) {
-                if (!prefix) member.setNickname("");
-                else member.setNickname(prefix + member.user.username);
+        await bot.updatePseudo(member);
+    });
+
+    (await db.collection("members-discord").find({}).toArray().catch(console.error)).forEach(async mem => {
+        if (!mem.langs || !mem.grades || !mem.agrees || !mem.date) {
+            var member = bot.guild.members.cache.get(mem.id);
+            var langs = [];
+            var grades = [];
+            var agrees = [];
+            if (member) {
+                if(member.roles.cache.has(bot.getRole(bot.roles.FRENCH).id)) langs.push("fr");
+                if(member.roles.cache.has(bot.getRole(bot.roles.ENGLISH).id)) langs.push("en");
+
+                member.roles.cache.forEach(role => {
+                    var n = role.name.split(" | ")[1];
+                    if(Object.values(bot.grades).includes(n)) grades.push(n);
+                });
+
+                if(member.roles.cache.has(bot.getRole(bot.roles.MEMBER))) agrees.push("rules");
             }
+            await db.collection("members-discord").findOneAndUpdate({ id: mem.id }, { $set: { date: new Date(), langs, grades, agrees } }).catch(console.error);
         }
     });
 
