@@ -157,7 +157,7 @@ class Bot {
         };
 
         this.libs = { fs: require('fs'), FileSync: require('lowdb/adapters/FileSync'), axios: require("axios"), lowdb: require("lowdb"), discord: Discord, schedule: require('node-schedule'), canvas: require("canvas"), ms: require("ms") };
-        this.version = "0.5";
+        this.version = "0.6";
 
         this.footerAuthor = {};
 
