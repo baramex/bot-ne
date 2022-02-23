@@ -6,7 +6,7 @@ module.exports.run = async (bot, interaction, lang, db) => {
     } catch (err) {}
 
     if (member && reason) {
-        if (member.roles.highest.comparePositionTo(modo.roles.highest) >= 0 || !member.kickable || !(await bot.isGradePermission(modo.id, "KICK_MEMBERS")) || member.id == modo.id) {
+        if (!(await bot.isHighestGrade(modo.id, member.id).catch(console.error)) || !member.kickable || !(await bot.isGradePermission(modo.id, "KICK_MEMBERS").catch(console.error)) || member.id == modo.id) {
             bot.log(bot.codes.KICK, bot.status.NOT_PERMISSION, modo.id, member.id, { reason });
             return interaction.reply({ embeds: [bot.embedNotPerm(lang)] });
         }

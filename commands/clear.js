@@ -4,7 +4,7 @@ module.exports.run = async (bot, interaction, lang, db) => {
         var nb = interaction.options.getNumber("nb-message", true);
     } catch (error) {}
 
-    if (!(await bot.isGradePermission(modo.id, "MANAGE_MESSAGES"))) {
+    if (!(await bot.isGradePermission(modo.id, "MANAGE_MESSAGES").catch(console.error))) {
         bot.log(bot.codes.BULK_DELETE, bot.status.NOT_PERMISSION, modo.id, null, {});
         return interaction.reply({ embeds: [bot.embedNotPerm(lang)] });
     }

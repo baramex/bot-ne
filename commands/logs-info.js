@@ -1,7 +1,7 @@
 const BSON = require("bson");
 
 module.exports.run = async (bot, interaction, lang, db) => {
-    if (!(await bot.isGradePermission(interaction.member.id, "VIEW_AUDIT_LOG"))) {
+    if (!(await bot.isGradePermission(interaction.member.id, "VIEW_AUDIT_LOG").catch(console.error))) {
         return interaction.reply({ embeds: [bot.embedNotPerm(lang)] });
     }
 
