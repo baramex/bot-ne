@@ -292,7 +292,6 @@ class Bot {
         return new Promise((res, rej) => {
             var id = this.generateID();
             db.collection("kicks").insertOne({ _id: id, modoID: modo.id, memberID: member.id, type: this.types.DISCORD, reason: reason, date: new Date() }).then(() => {
-                bot.removeAllGrades(member.id);
                 member.kick(reason).then(() => {
                     this.log(this.codes.KICK, status, modo.id, member.id, { reason, kickID: id });
                     res(id);
@@ -897,19 +896,22 @@ bot.client.on("guildMemberAdd", async (member) => {
     channel?.send(":airplane_arriving: <@" + member.id + "> joined the server" + (inv ? ("by <@" + inv + "> !") : " !")).catch(console.error);
 
     if (!agrees || agrees.length == 0 || !agrees.includes("rules")) {
-        rules?.permissionOverwrites.create(member, { VIEW_CHANNEL: true });
+        await rules?.permissionOverwrites.create(member, { VIEW_CHANNEL: true });
     }
     else if (!langs || langs.length == 0) {
-        roles?.permissionOverwrites.create(member, { VIEW_CHANNEL: true });
+        await roles?.permissionOverwrites.create(member, { VIEW_CHANNEL: true });
     }
     else if (grades?.length > 0 || langs?.length > 0) {
-        await member.roles.add(bot.getRole(bot.roles.MEMBER));
-        if (grades) await member.roles.add(bot.getRolesFromGrades(grades));
-        if (langs) await member.roles.add(bot.getRolesFromLangs(langs));
+        var r = [bot.getRole(bot.roles.MEMBER)];
+        if (grades) r.push(...bot.getRolesFromGrades(grades));
+        if (langs) r.push(...bot.getRolesFromLangs(langs));
+        await member.roles.add(r);
     }
 });
 
 bot.client.on("guildMemberRemove", (member) => {
+    bot.removeAllGrades(member.id);
+
     var channel = bot.getChannel(bot.channels.GATE);
     channel.send(":airplane_departure: **" + member.user.tag + "** left the server !").catch(console.error);
 });
@@ -951,9 +953,10 @@ bot.client.on("interactionCreate", async interaction => {
                 c?.permissionOverwrites.create(member, { VIEW_CHANNEL: true });
             }
             else {
-                await member.roles.add(bot.getRole(bot.roles.MEMBER));
-                if (grades) await member.roles.add(bot.getRolesFromGrades(grades));
-                if (langs) await member.roles.add(bot.getRolesFromLangs(langs));
+                var r = [bot.getRole(bot.roles.MEMBER)];
+                if (grades) r.push(...bot.getRolesFromGrades(grades));
+                if (langs) r.push(...bot.getRolesFromLangs(langs));
+                await member.roles.add(r);
             }
         }
     }
@@ -994,7 +997,7 @@ bot.client.on("interactionCreate", async interaction => {
                 }
             } else {
                 interaction.reply({ content: ":heavy_plus_sign: Rôle ajouté !", ephemeral: true });
-                member.roles.add(fr?.id);
+                member.roles.add(fr);
                 bot.addLangMember(member.id, "fr");
             }
         }
@@ -1010,18 +1013,19 @@ bot.client.on("interactionCreate", async interaction => {
                 }
             } else {
                 interaction.reply({ content: ":heavy_plus_sign: Role added !", ephemeral: true });
-                member.roles.add(en?.id);
+                member.roles.add(en);
                 bot.addLangMember(member.id, "en");
             }
         }
 
         if (member.roles.cache.size == 1) {
             var c = bot.getChannel(bot.channels.ROLES);
-            c?.permissionOverwrites.delete(member);
+            await c?.permissionOverwrites.delete(member);
 
-            member.roles.add(bot.getRole(bot.roles.MEMBER)?.id).catch(() => {
-                bot.errorDebug("Adding Role", "Unable to add role to new member !")
-            });
+            var r = [bot.getRole(bot.roles.MEMBER)];
+            var grades = await bot.getGradesMember(member.id).catch(console.error);
+            if (grades) r.push(...bot.getRolesFromGrades(grades));
+            await member.roles.add(r);
         }
     }
 });
@@ -1177,27 +1181,6 @@ const update = bot.libs.schedule.scheduleJob('0 */3 * * *', async () => {
         }
 
         await bot.updatePseudo(member);
-    });
-
-    (await db.collection("members-discord").find({}).toArray().catch(console.error)).forEach(async mem => {
-        if (!mem.langs || !mem.grades || !mem.agrees || !mem.date) {
-            var member = bot.guild.members.cache.get(mem.id);
-            var langs = [];
-            var grades = [];
-            var agrees = [];
-            if (member) {
-                if(member.roles.cache.has(bot.getRole(bot.roles.FRENCH).id)) langs.push("fr");
-                if(member.roles.cache.has(bot.getRole(bot.roles.ENGLISH).id)) langs.push("en");
-
-                member.roles.cache.forEach(role => {
-                    var n = role.name.split(" | ")[1];
-                    if(Object.values(bot.grades).includes(n)) grades.push(n);
-                });
-
-                if(member.roles.cache.has(bot.getRole(bot.roles.MEMBER))) agrees.push("rules");
-            }
-            await db.collection("members-discord").findOneAndUpdate({ id: mem.id }, { $set: { date: new Date(), langs, grades, agrees } }).catch(console.error);
-        }
     });
 
     bot.guild.members.cache.filter(a => a.roles.cache.size == 1 && a.joinedTimestamp + 1000 * 60 * 60 * 24 <= new Date().getTime()).forEach(async member => {

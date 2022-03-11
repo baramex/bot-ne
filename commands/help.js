@@ -1,10 +1,4 @@
 module.exports.run = (bot, interaction, lang, db) => {
-    var embed = new bot.libs.discord.MessageEmbed()
-        .setColor(bot.infoColor)
-        .setTitle(":dagger: | New Empires - help")
-        .setFooter({ text: bot.footerAuthor.text + " | " + lang.toUpperCase(), iconURL: bot.footerAuthor.iconURL });
-
-    var utilsCMD = "";
     var userCMD = "";
     var modCMD = "";
     var mcCMD = "";
@@ -77,16 +71,36 @@ module.exports.run = (bot, interaction, lang, db) => {
             str += "- **/" + c.name + "**" + (c.args ? (" *" + c.args + "*") : "") + ": " + (c.description[lang] || c.description) + "\n";
         });
 
-        if (cmd.infos.category == "utils") utilsCMD += str;
-        else if (cmd.infos.category == "user") userCMD += str;
+        if (cmd.infos.category == "user") userCMD += str;
         else if (cmd.infos.category == "mod") modCMD += str;
         else if (cmd.infos.category == "mc") mcCMD += str;
     });
 
-    embed.addField(":hotel: " + (lang == "en" ? "Utility/main commands" : "Commandes utilitaires et principales") + " :book:", utilsCMD);
-    embed.addField(":construction_worker: " + (lang == "en" ? "Commands for users" : "Commandes pour les utilisateurs") + " :hut:", userCMD);
-    embed.addField(":police_officer: " + (lang == "en" ? "Moderation commands" : "Commandes de modération") + " :no_entry_sign:", modCMD);
-    embed.addField(":desert: Minecraft :pick:", mcCMD);
+    var fields = [{ title: ":construction_worker: " + (lang == "en" ? "Commands for users" : "Commandes pour les utilisateurs") + " :hut:", value: userCMD },
+    { title: ":desert: Minecraft :pick:", value: mcCMD }, { title: ":police_officer: " + (lang == "en" ? "Moderation commands" : "Commandes de modération") + " :no_entry_sign:", value: modCMD }];
+
+    var embed = new bot.libs.discord.MessageEmbed()
+        .setColor(bot.infoColor)
+        .setTitle(":dagger: | New Empires - help")
+        .setFooter({ text: bot.footerAuthor.text + " | " + lang.toUpperCase(), iconURL: bot.footerAuthor.iconURL });
+
+    fields.forEach(field => {
+        var txt = "";
+        var r = field.value;
+        do {
+            var ts = 0;
+            txt = r.split("\n").map(a => {
+                ts += a.length;
+                if(ts >= 1024) return "";
+                return a;
+            }).filter(a => a != "").join("\n");
+
+            r = r.replace(txt, "");
+
+            embed.addField(field.title, txt);
+        }
+        while (r.replace(/ /g, "").replace(/\n/g, "").length > 0);
+    });
 
     interaction.reply({ embeds: [embed] });
 };
@@ -94,5 +108,5 @@ module.exports.run = (bot, interaction, lang, db) => {
 module.exports.info = {
     name: "help",
     description: { en: "displays the list of bot commands.", fr: "affiche la liste des commandes." },
-    category: "utils"
+    category: "user"
 };

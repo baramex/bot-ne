@@ -37,7 +37,6 @@ module.exports.run = async (bot, interaction, lang, db) => {
         db.collection("bans").insertOne({ _id: id, modoID: modo.id, memberID: member.id, type: bot.types.DISCORD, reason: reason, active: true, duration: t || 0, endDate: new Date(t + new Date().getTime()), date: new Date() }).then(() => {
             member.ban({ reason: reason });
 
-            bot.removeAllGrades(member.id);
             bot.log(bot.codes.BAN, bot.status.OK, modo.id, member.id, { reason, duration, banID: id });
 
             var embed = new bot.libs.discord.MessageEmbed()
